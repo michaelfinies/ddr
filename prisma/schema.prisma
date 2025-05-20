@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  name          String
+  email         String      @unique
+  walletAddress String      @unique
+  createdAt     DateTime    @default(now())
+  preferences   UserPreferences?
+  readingLogs   ReadingLog[]
+  purchases     Purchase[]
+  ownedItems    OwnedItem[]
+  leaderboard   Leaderboard?
+}
+
+model UserPreferences {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  genrePrefs    String[]
+  notification  Boolean  @default(true)
+  darkMode      Boolean  @default(false)
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Book {
+  id           String      @id @default(uuid())
+  title        String
+  author       String
+  genre        String
+  description  String
+  readingLogs  ReadingLog[]
+  saved Boolean
+}
+
+model ReadingLog {
+  id          String    @id @default(uuid())
+  userId      String
+  bookId      String
+  duration    Int
+  summary     String
+  timestamp   DateTime  @default(now())
+  status      LogStatus @default(PENDING)
+  hash        String?  
+  validatorId String?
+  user        User      @relation(fields: [userId], references: [id])
+  book        Book      @relation(fields: [bookId], references: [id])
+  validator   Validator? @relation(fields: [validatorId], references: [id])
+  reward      TokenReward?
+}
+
+model Validator {
+  id        String       @id @default(uuid())
+  name      String
+  email     String       @unique
+  reviews   ReadingLog[]
+}
+
+enum LogStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TokenReward {
+  id         String   @id @default(uuid())
+  logId      String   @unique
+  tokenType  String  
+  tokenValue Int
+  contractTx String   
+  log        ReadingLog @relation(fields: [logId], references: [id])
+}
+
+model StoreItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Int      
+  quantity    Int
+  qrCodeUrl   String?
+  purchases   Purchase[]
+  ownedItems  OwnedItem[]
+}
+
+model Purchase {
+  id        String     @id @default(uuid())
+  userId    String
+  itemId    String
+  timestamp DateTime   @default(now())
+  txHash    String
+  user      User       @relation(fields: [userId], references: [id])
+  item      StoreItem  @relation(fields: [itemId], references: [id])
+}
+
+model OwnedItem {
+  id         String     @id @default(uuid())
+  userId     String
+  itemId     String
+  acquiredAt DateTime   @default(now())
+  qrCodeUrl  String?
+  user       User       @relation(fields: [userId], references: [id])
+  item       StoreItem  @relation(fields: [itemId], references: [id])
+}
+
+model Leaderboard {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  booksRead  Int
+  lastUpdated DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
