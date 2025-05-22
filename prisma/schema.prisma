@@ -3,63 +3,54 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" 
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 model User {
   id            String      @id @default(uuid())
   name          String
   email         String      @unique
-  walletAddress String      @unique
+  password      String?
+  walletAddress String?     @unique
   createdAt     DateTime    @default(now())
+  avatarSeed    String?
+  avatarColor   String?
+  school        String?
+  isSchool      Boolean     @default(false)
   preferences   UserPreferences?
   readingLogs   ReadingLog[]
-  purchases     Purchase[]
-  ownedItems    OwnedItem[]
-  leaderboard   Leaderboard?
+  PurchasedItems     PurchasedItem[]
+  TransactionHistory TransactionHistory[]
+  hasOnboarded  Boolean     @default(false)
 }
 
 model UserPreferences {
   id            String   @id @default(uuid())
   userId        String   @unique
   genrePrefs    String[]
+  reading       String[]
+  favorites     String[]
+  goal          String?
   notification  Boolean  @default(true)
   darkMode      Boolean  @default(false)
   user          User     @relation(fields: [userId], references: [id])
 }
 
-model Book {
-  id           String      @id @default(uuid())
-  title        String
-  author       String
-  genre        String
-  description  String
-  readingLogs  ReadingLog[]
-  saved Boolean
-}
-
 model ReadingLog {
   id          String    @id @default(uuid())
   userId      String
-  bookId      String
+  title        String
   duration    Int
   summary     String
   timestamp   DateTime  @default(now())
   status      LogStatus @default(PENDING)
-  hash        String?  
   validatorId String?
+  validator    String?
+  logHash      String?
   user        User      @relation(fields: [userId], references: [id])
-  book        Book      @relation(fields: [bookId], references: [id])
-  validator   Validator? @relation(fields: [validatorId], references: [id])
   reward      TokenReward?
-}
-
-model Validator {
-  id        String       @id @default(uuid())
-  name      String
-  email     String       @unique
-  reviews   ReadingLog[]
+  approvals   Int @default(0)
 }
 
 enum LogStatus {
@@ -83,35 +74,43 @@ model StoreItem {
   description String
   price       Int      
   quantity    Int
-  qrCodeUrl   String?
-  purchases   Purchase[]
-  ownedItems  OwnedItem[]
+  PurchasedItems   PurchasedItem[]
 }
 
-model Purchase {
+model PurchasedItem {
   id        String     @id @default(uuid())
   userId    String
   itemId    String
-  timestamp DateTime   @default(now())
+  acquiredAt DateTime   @default(now())
   txHash    String
+  qrCodeUrl  String?
   user      User       @relation(fields: [userId], references: [id])
   item      StoreItem  @relation(fields: [itemId], references: [id])
 }
 
-model OwnedItem {
-  id         String     @id @default(uuid())
-  userId     String
-  itemId     String
-  acquiredAt DateTime   @default(now())
-  qrCodeUrl  String?
-  user       User       @relation(fields: [userId], references: [id])
-  item       StoreItem  @relation(fields: [itemId], references: [id])
+model TransactionHistory {
+  id              String    @id @default(uuid())
+  userId          String    
+  transactionType TransactionType 
+  amount          Int?     
+  tokenAddress    String?   
+  transactionHash String    @unique 
+  blockNumber     Int?      
+  timestamp       DateTime  @default(now()) 
+  status          TxStatus  @default(PENDING)
+  user            User      @relation(fields: [userId], references: [id])
+
 }
 
-model Leaderboard {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  booksRead  Int
-  lastUpdated DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+enum TransactionType {
+  TOKEN_MINT  
+  TOKEN_BURN   
+  TOKEN_TRANSFER 
+  ITEM_PURCHASE 
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMED
+  FAILED
 }

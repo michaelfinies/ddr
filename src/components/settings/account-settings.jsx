@@ -22,8 +22,6 @@ const passwordSchema = z.object({
 });
 
 export function AccountSettings() {
-  const [googleConnected, setGoogleConnected] = React.useState(false);
-
   const passwordForm = useForm({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -37,20 +35,6 @@ export function AccountSettings() {
       description: "Your password has been updated.",
     });
     passwordForm.reset();
-  }
-
-  function handleGoogleConnect() {
-    setGoogleConnected(true);
-    toast.success("Google connected!", {
-      description: "Your Google account is now connected.",
-    });
-    // Add OAuth logic later
-  }
-
-  function handleGoogleDisconnect() {
-    setGoogleConnected(false);
-    toast("Disconnected Google account.");
-    // Add disconnect logic later
   }
 
   return (
@@ -104,34 +88,6 @@ export function AccountSettings() {
               </Button>
             </form>
           </Form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Google Account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">
-                {googleConnected
-                  ? "Google Account Connected"
-                  : "Google Account Not Connected"}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {googleConnected
-                  ? "Your account is linked with Google."
-                  : "Connect your Google account for easy login."}
-              </div>
-            </div>
-            {googleConnected ? (
-              <Button variant="outline" onClick={handleGoogleDisconnect}>
-                Disconnect
-              </Button>
-            ) : (
-              <Button onClick={handleGoogleConnect}>Connect</Button>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>

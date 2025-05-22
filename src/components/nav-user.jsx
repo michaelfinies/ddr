@@ -5,6 +5,7 @@ import {
   IconLogout,
   IconUserCircle,
 } from "@tabler/icons-react";
+import BoringAvatar from "boring-avatars";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -36,14 +37,19 @@ export function NavUser({ user }) {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">MF</AvatarFallback>
+              <Avatar className="h-8 w-8 rounded-lg ">
+                <BoringAvatar
+                  size={20}
+                  name={user?.name || "default"}
+                  variant={user?.AvatarSeed}
+                  colors={user?.AvatarColor?.split("-")}
+                  className="w-8 h-8 rounded-full"
+                />
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{user?.name}</span>
                 <span className="text-muted-foreground truncate text-xs">
-                  {user.email}
+                  {user?.email}
                 </span>
               </div>
               <IconDotsVertical className="ml-auto size-4" />
@@ -58,13 +64,18 @@ export function NavUser({ user }) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">MF</AvatarFallback>
+                  <BoringAvatar
+                    size={20}
+                    name={user?.name || "default"}
+                    variant={user?.AvatarSeed}
+                    colors={user?.AvatarColor?.split("-")}
+                    className="w-8 h-8 rounded-full"
+                  />
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate font-medium">{user?.name}</span>
                   <span className="text-muted-foreground truncate text-xs">
-                    {user.email}
+                    {user?.email}
                   </span>
                 </div>
               </div>

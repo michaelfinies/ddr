@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import Link from "next/link";
+import { IconLoader } from "@tabler/icons-react";
 
-export function FinishStep() {
+export function FinishStep({ onNext, loading, error }) {
   return (
     <motion.div
       key="finish"
@@ -26,14 +26,15 @@ export function FinishStep() {
           You’re all set. Your reading journey begins now—start your first book
           and earn rewards!
         </p>
-        <Link href="/dashboard">
-          <Button
-            size="lg"
-            className="mt-4 px-10 py-6 text-lg shadow-xl hover:cursor-pointer"
-          >
-            Finish
-          </Button>
-        </Link>
+
+        {error ? <p className="text-red-500 text-xs">{error}</p> : null}
+        <Button
+          onClick={onNext}
+          size="lg"
+          className="mt-4 px-10 py-6 text-lg shadow-xl hover:cursor-pointer"
+        >
+          {loading ? <IconLoader className="w-6 h-6 animate-spin" /> : "Finish"}
+        </Button>
       </div>
     </motion.div>
   );

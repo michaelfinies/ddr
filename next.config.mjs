@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  devIndicators: {
+    // buildActivity: false, // This specifically hides the build activity indicator
+    buildActivityPosition: "top-right", // You can still specify position even if not shown
+  },
   async rewrites() {
     return [
       {
@@ -10,6 +14,11 @@ const nextConfig = {
         source: "/logs",
         destination: "/authenticated/logs",
       },
+      {
+        source: "/logs/:id",
+        destination: "/authenticated/logs/:id",
+      },
+
       {
         source: "/leaderboard",
         destination: "/authenticated/leaderboard",

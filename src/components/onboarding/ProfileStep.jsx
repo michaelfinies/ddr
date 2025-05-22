@@ -12,19 +12,15 @@ const AVATAR_SEEDS = ["marble", "beam", "pixel", "sunset", "ring", "bauhaus"];
 
 const THEME_OPTIONS = [
   {
-    name: "Cool Blues",
     colors: ["#92A1C6", "#146A7C", "#F0AB3D", "#C271B4", "#C20D90"],
   },
   {
-    name: "Warm Oranges",
     colors: ["#FFB347", "#F98866", "#A2DED0", "#00BCD4", "#5C6BC0"],
   },
   {
-    name: "Pastel Dreams",
     colors: ["#E0F7FA", "#B2EBF2", "#80DEEA", "#4DD0E1", "#26C6DA"],
   },
   {
-    name: "Vibrant Mix",
     colors: ["#F44336", "#9C27B0", "#3F51B5", "#2196F3", "#00BCD4"],
   },
 ];
@@ -33,10 +29,14 @@ export function ProfileStep({ profile, setProfile, onNext }) {
   const [selectedAvatarSeed, setSelectedAvatarSeed] = useState(
     profile.avatarSeed || AVATAR_SEEDS[0]
   );
-  const [selectedTheme, setSelectedTheme] = useState(0); // Index of the selected theme
+  const [selectedTheme, setSelectedTheme] = useState(0);
 
   const handleThemeChange = (value) => {
     const themeIndex = parseInt(value, 10);
+    setProfile({
+      ...profile,
+      avatarColor: THEME_OPTIONS[themeIndex]?.colors?.join("-"),
+    });
     setSelectedTheme(themeIndex);
   };
 
@@ -49,7 +49,7 @@ export function ProfileStep({ profile, setProfile, onNext }) {
       transition={{ duration: 0.5 }}
     >
       <div className="flex flex-col gap-6">
-        <h2 className="text-2xl font-bold text-center mb-2 text-blue-500">
+        <h2 className="text-2xl font-bold text-center text-blue-500">
           Set Up Your Profile
         </h2>
         <Label className="-mb-3" htmlFor="displayName">
@@ -58,10 +58,8 @@ export function ProfileStep({ profile, setProfile, onNext }) {
         <Input
           id="displayName"
           placeholder="ExampleReader57"
-          value={profile.displayName}
-          onChange={(e) =>
-            setProfile({ ...profile, displayName: e.target.value })
-          }
+          value={profile.name}
+          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
           required
         />
         <div>
@@ -118,7 +116,7 @@ export function ProfileStep({ profile, setProfile, onNext }) {
                 >
                   <BoringAvatar
                     size={64}
-                    name={profile.displayName || "default"}
+                    name={profile.name || "default"}
                     variant={seed}
                     colors={THEME_OPTIONS[selectedTheme].colors}
                     className="w-16 h-16 rounded-full"
@@ -132,7 +130,7 @@ export function ProfileStep({ profile, setProfile, onNext }) {
         <Button
           onClick={() => onNext()}
           className="mt-2"
-          disabled={!profile.displayName || !profile.avatarSeed}
+          disabled={!profile.name || !profile.avatarSeed}
         >
           Next
         </Button>

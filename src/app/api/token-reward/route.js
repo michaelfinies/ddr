@@ -10,7 +10,7 @@ export async function GET() {
   const rewards = await prisma.tokenReward.findMany({
     where: {
       log: {
-        userId: user.id,
+        userId: user?.id,
       },
     },
     include: {

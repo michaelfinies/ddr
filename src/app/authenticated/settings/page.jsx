@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const [active, setActive] = useState("profile");
 
   return (
-    <div className="flex bg-[#fafafa] min-h-screen">
+    <div className="flex bg-[#fafafa] dark:bg-slate-900 dark:text-gray-600 min-h-screen">
       {/* Sidebar */}
       <aside className="w-56 m-10 ml-0">
         <nav>
@@ -28,8 +28,8 @@ export default function SettingsPage() {
                   onClick={() => setActive(item.key)}
                   className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
                     active === item.key
-                      ? "bg-gray-200 text-black"
-                      : "hover:bg-gray-100 text-gray-600"
+                      ? "bg-gray-200 dark:bg-gray-900 dark:text-gray-600 text-black"
+                      : "hover:bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-600"
                   }`}
                 >
                   {item.label}
@@ -43,7 +43,7 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="flex-1">
         <div className=" mx-auto">
-          <div className="bg-white border rounded-2xl shadow p-2">
+          <div className="bg-white dark:bg-gray-900 border rounded-2xl shadow p-2">
             {active === "profile" && <ProfileSettings />}
             {active === "account" && <AccountSettings />}
             {active === "appearance" && <AppearanceSettings />}

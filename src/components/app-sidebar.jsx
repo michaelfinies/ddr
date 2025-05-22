@@ -23,48 +23,41 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "My logs",
-      url: "/logs",
-      icon: IconFileWord,
-    },
-    {
-      title: "LeaderBoard",
-      url: "/leaderboard",
-      icon: IconMedal,
-    },
-    {
-      title: "Wallet",
-      url: "/wallet",
-      icon: IconWallet,
-    },
-    {
-      title: "Books",
-      url: "/books",
-      icon: IconBook,
-    },
-    {
-      title: "History",
-      url: "/history",
-      icon: IconHistory,
-    },
-    {
-      title: "Store",
-      url: "/store",
-      icon: IconBuildingStore,
-    },
-  ],
-};
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function AppSidebar({ ...props }) {
+  const { user } = useAuthStore();
+  const data = {
+    user: user,
+    navMain: [
+      {
+        title: "My logs",
+        url: "/logs",
+        icon: IconFileWord,
+      },
+      {
+        title: "Wallet",
+        url: "/wallet",
+        icon: IconWallet,
+      },
+      {
+        title: "Books",
+        url: "/books",
+        icon: IconBook,
+      },
+
+      {
+        title: "Marketplace",
+        url: "/store",
+        icon: IconBuildingStore,
+      },
+      // {
+      //   title: "Transaction History",
+      //   url: "/history",
+      //   icon: IconHistory,
+      // },
+    ],
+  };
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>

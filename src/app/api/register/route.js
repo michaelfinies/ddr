@@ -13,7 +13,7 @@ export async function POST(request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma?.user?.findUnique({ where: { email } });
 
     if (existingUser) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
+    const user = await prisma.user?.create({
       data: {
         email,
         password: hashedPassword,
@@ -32,15 +32,38 @@ export async function POST(request) {
       },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: "User registered successfully",
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        createdAt: user.createdAt,
+        id: user?.id,
+        name: user?.name || null,
+        email: user?.email || null,
+        walletAddress: user?.walletAddress || null,
+        avatarSeed: user?.avatarSeed || null,
+        avatarColor: user?.avatarColor || null,
+        hasOnboarded: user?.hasOnboarded || null,
       },
     });
+
+    response.cookies.set(
+      "user",
+      JSON.stringify({
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        walletAddress: user?.walletAddress,
+        avatarSeed: user?.avatarSeed,
+        avatarColor: user?.avatarColor,
+        hasOnboarded: user?.hasOnboarded,
+      }),
+      {
+        httpOnly: true,
+        path: "/",
+        maxAge: 60 * 60 * 24,
+      }
+    );
+
+    return response;
   } catch (err) {
     console.error("Registration error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

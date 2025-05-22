@@ -8,7 +8,7 @@ export async function GET() {
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const items = await prisma.ownedItem.findMany({
-    where: { userId: user.id },
+    where: { userId: user?.id },
     include: { item: true },
   });
 
@@ -24,7 +24,7 @@ export async function POST(request) {
 
   const item = await prisma.ownedItem.create({
     data: {
-      userId: user.id,
+      userId: user?.id,
       itemId,
       qrCodeUrl,
     },

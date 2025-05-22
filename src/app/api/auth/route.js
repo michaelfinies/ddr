@@ -7,11 +7,11 @@ export async function POST(request) {
     const { email, password } = await request.json();
 
     // 1. Find user by email
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user?.findUnique({
       where: { email },
     });
 
-    if (!user || !user.password) {
+    if (!user || !user?.password) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
@@ -19,7 +19,7 @@ export async function POST(request) {
     }
 
     // 2. Compare password
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user?.password);
 
     if (!isValid) {
       return NextResponse.json(
@@ -32,16 +32,27 @@ export async function POST(request) {
     const response = NextResponse.json({
       message: "Authenticated",
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        walletAddress: user.walletAddress,
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        walletAddress: user?.walletAddress,
+        avatarSeed: user?.avatarSeed,
+        avatarColor: user?.avatarColor,
+        hasOnboarded: user?.hasOnboarded,
       },
     });
 
     response.cookies.set(
       "user",
-      JSON.stringify({ id: user.id, name: user.name }),
+      JSON.stringify({
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        walletAddress: user?.walletAddress,
+        avatarSeed: user?.avatarSeed,
+        avatarColor: user?.avatarColor,
+        hasOnboarded: user?.hasOnboarded,
+      }),
       {
         httpOnly: true,
         path: "/",

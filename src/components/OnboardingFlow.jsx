@@ -7,16 +7,17 @@ import { WelcomeStep } from "./onboarding/welcomeStep";
 import { ProfileStep } from "./onboarding/ProfileStep";
 import { WalletStep } from "./onboarding/walletStep";
 import { PreferencesStep } from "./onboarding/preferencesStep";
-import { GoogleStep } from "./onboarding/GoogleStep";
 import { ConsentStep } from "./onboarding/ConsentStep";
 import { FinishStep } from "./onboarding/FinishStep";
-
+import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
+import { AudienceStep } from "./onboarding/StudentOrSchoolStep";
 const STEPS = [
   "Welcome",
+  "Audience",
   "Profile",
   "Wallet",
   "Preferences",
-  "Google",
   "Consent",
   "Finish",
 ];
@@ -41,29 +42,79 @@ function ProgressBar({ step }) {
 }
 
 export function OnboardingFlow({ className }) {
+  const { user, setUser } = useAuthStore();
   const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const [profile, setProfile] = useState({
-    displayName: "",
-    avatarSeed: "",
-    nftAvatarSeed: "",
+    name: "",
+    avatarSeed: "pixel",
+    avatarColor: "#92A1C6#146A7C#F0AB3D#C271B4#C20D90",
   });
   const [wallet, setWallet] = useState({ address: "" });
   const [prefs, setPrefs] = useState({ genres: [], goal: "" });
-  const [googleConnected, setGoogleConnected] = useState(false);
+
   const [consent, setConsent] = useState({
     terms: false,
     notifications: false,
     blockchain: false,
   });
 
+  async function handleFinish() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const payload = {
+        email: user?.email,
+        name: profile.name,
+        avatarSeed: profile.avatarSeed,
+        avatarColor: profile.avatarColor,
+        walletAddress: wallet.address,
+        genres: prefs.genres,
+        goal: prefs.goal,
+        hasOnboarded: true,
+        isSchool: profile.role === "school" || false,
+        school: profile.school || null,
+      };
+
+      const res = await fetch("/api/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (res.ok) {
+        setUser(res.updatedUser);
+        return router.push("/books");
+      }
+      if (!res.ok) throw new Error(json.error || "Unknown error");
+
+      setStep(step + 1);
+    } catch (err) {
+      setError(err.message || "Submission failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const steps = [
     <WelcomeStep onNext={() => setStep(step + 1)} />,
+    <AudienceStep
+      profile={profile}
+      setProfile={setProfile}
+      onNext={() => setStep(step + 1)}
+    />,
     <ProfileStep
       profile={profile}
       setProfile={setProfile}
       onNext={() => setStep(step + 1)}
     />,
+
     <WalletStep
       wallet={wallet}
       setWallet={setWallet}
@@ -74,17 +125,12 @@ export function OnboardingFlow({ className }) {
       setPrefs={setPrefs}
       onNext={() => setStep(step + 1)}
     />,
-    <GoogleStep
-      googleConnected={googleConnected}
-      setGoogleConnected={setGoogleConnected}
-      onNext={() => setStep(step + 1)}
-    />,
     <ConsentStep
       consent={consent}
       setConsent={setConsent}
       onNext={() => setStep(step + 1)}
     />,
-    <FinishStep />,
+    <FinishStep onNext={handleFinish} loading={loading} error={error} />,
   ];
 
   return (

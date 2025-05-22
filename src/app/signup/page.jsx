@@ -1,6 +1,6 @@
 // Page.jsx (or page.js in Next.js /app)
 import React from "react";
-import { LoginForm } from "@/components/login-form";
+import { SignUpForm } from "@/components/signup-form";
 import "./signup.css";
 
 export default function Page() {
@@ -22,7 +22,7 @@ export default function Page() {
       </div>
 
       <div className="relative z-10 flex items-center justify-center h-full">
-        <LoginForm />
+        <SignUpForm />
       </div>
     </div>
   );

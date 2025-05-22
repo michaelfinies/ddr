@@ -1,13 +1,23 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 export function WalletStep({ wallet, setWallet, onNext }) {
-  // Placeholder for actual Metamask integration
-  function connectMetamask() {
-    setWallet({ address: "0x1234...abcd" });
-    onNext();
-  }
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, error, isLoading, pendingConnector } =
+    useConnect();
+  const { disconnect } = useDisconnect();
+
+  useEffect(() => {
+    if (isConnected && address) {
+      setWallet({ address });
+    }
+  }, [address, isConnected, setWallet]);
+
+  const metamaskConnector = connectors.find((c) => c.name === "MetaMask");
+
   return (
     <motion.div
       key="wallet"
@@ -27,12 +37,47 @@ export function WalletStep({ wallet, setWallet, onNext }) {
           Connect your <strong>Metamask</strong> wallet to earn crypto rewards
           and unique NFTs on your reading journey.
         </p>
-        <Button
-          onClick={connectMetamask}
-          className="w-60 py-6 text-lg flex gap-2 justify-center items-center bg-orange-700 hover:cursor-pointer"
-        >
-          Connect
-        </Button>
+
+        {!isConnected ? (
+          <Button
+            onClick={() => connect({ connector: metamaskConnector })}
+            className="w-60 py-6 text-lg flex gap-2 justify-center items-center bg-orange-700 hover:cursor-pointer"
+            disabled={isLoading}
+          >
+            {isLoading
+              ? "Connecting..."
+              : `Connect ${metamaskConnector?.name ?? "Wallet"}`}
+          </Button>
+        ) : (
+          <div>
+            <div className="mb-2 text-center -mt-3">
+              <p className="text-green-500 font-bold uppercase">
+                CONNECTED successfully
+              </p>
+              <span className="font-mono text-xs font-semibold text-gray-600">
+                {address}
+              </span>
+            </div>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => disconnect()}
+                className="w-52 py-6 text-lg flex gap-2 justify-center items-center bg-red-500 hover:cursor-pointer"
+              >
+                Disconnect
+              </Button>
+              <Button
+                onClick={onNext}
+                className="w-52 py-6 text-lg flex gap-2 justify-center items-center bg-black text-white hover:cursor-pointer"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error.message}</p>
+        )}
       </div>
     </motion.div>
   );

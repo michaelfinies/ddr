@@ -20,7 +20,7 @@ export async function POST(request) {
 
   const entry = await prisma.leaderboard.create({
     data: {
-      userId: user.id,
+      userId: user?.id,
       booksRead,
     },
   });
@@ -36,7 +36,7 @@ export async function PUT(request) {
   const { booksRead } = await request.json();
 
   const entry = await prisma.leaderboard.update({
-    where: { userId: user.id },
+    where: { userId: user?.id },
     data: {
       booksRead,
       lastUpdated: new Date(),
