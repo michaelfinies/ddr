@@ -12,6 +12,7 @@ import { FinishStep } from "./onboarding/FinishStep";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { AudienceStep } from "./onboarding/StudentOrSchoolStep";
+import { useEffect } from "react";
 const STEPS = [
   "Welcome",
   "Audience",
@@ -48,6 +49,10 @@ export function OnboardingFlow({ className }) {
   const [error, setError] = useState("");
   const router = useRouter();
 
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
+
   const [profile, setProfile] = useState({
     name: "",
     avatarSeed: "pixel",
@@ -65,6 +70,7 @@ export function OnboardingFlow({ className }) {
   async function handleFinish() {
     setLoading(true);
     setError("");
+    console.log("this is the user" + user);
 
     try {
       const payload = {
@@ -90,7 +96,7 @@ export function OnboardingFlow({ className }) {
 
       if (res.ok) {
         setUser(res.updatedUser);
-        return router.push("/books");
+        router.push("/books");
       }
       if (!res.ok) throw new Error(json.error || "Unknown error");
 

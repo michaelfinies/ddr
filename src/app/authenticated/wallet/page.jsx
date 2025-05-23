@@ -35,7 +35,10 @@ import {
   Star,
   Flame,
   User,
+  Sun,
+  Clock,
 } from "lucide-react";
+
 import { IconBook, IconMedal, IconGift, IconCoin } from "@tabler/icons-react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -47,31 +50,153 @@ function shortAddress(addr) {
 
 const BADGE_ICONS = [
   {
-    icon: <Trophy className="w-6 h-6 text-yellow-500" />,
+    icon: <Trophy className="w-8 h-8 text-yellow-600" />,
     label: "First Book",
-    condition: (count) => count >= 1,
+    desc: "Congrats! You read your first book.",
+    theme: "bg-yellow-300 text-yellow-900 shadow-lg border-yellow-800",
+    condition: ({ stats }) => stats.books >= 1,
   },
   {
-    icon: <Book className="w-6 h-6 text-indigo-500" />,
+    icon: <Book className="w-8 h-8 text-indigo-600" />,
     label: "10 Books",
-    condition: (count) => count >= 10,
+    desc: "10 books read! You're on a roll.",
+    theme:
+      "bg-indigo-200 text-indigo-900 shadow-lg border-indigo-800 bg-opacity-75",
+    condition: ({ stats }) => stats.books >= 10,
   },
   {
-    icon: <Flame className="w-6 h-6 text-red-500" />,
-    label: "Streak",
-    condition: (days) => days >= 7,
+    icon: <Book className="w-8 h-8 text-pink-600" />,
+    label: "25 Books",
+    desc: "25 books down. That's dedication!",
+    theme: "bg-pink-200 text-pink-900 shadow-md border-pink-800",
+    condition: ({ stats }) => stats.books >= 25,
   },
   {
-    icon: <Star className="w-6 h-6 text-purple-500" />,
+    icon: <Book className="w-8 h-8 text-rose-700" />,
+    label: "50 Books",
+    desc: "Half a hundred! You're elite.",
+    theme: "bg-rose-200 text-rose-900 shadow-xl border-rose-800",
+    condition: ({ stats }) => stats.books >= 50,
+  },
+  {
+    icon: <Clock className="w-8 h-8 text-yellow-500" />,
     label: "1 Hour",
-    condition: (minutes) => minutes >= 60,
+    desc: "You've tracked 1 hour of reading.",
+    theme: "bg-yellow-100 text-yellow-900 shadow-sm border-yellow-800",
+    condition: ({ stats }) => stats.minutes >= 60,
   },
   {
-    icon: <IconMedal className="w-6 h-6 text-emerald-500" />,
-    label: "Validator's Choice",
-    condition: (reward) => reward?.tokenType === "validator",
+    icon: <Clock className="w-8 h-8 text-yellow-700" />,
+    label: "10 Hours",
+    desc: "10 hours of focused reading time.",
+    theme: "bg-yellow-300 text-yellow-900 shadow-md border-brown-800",
+    condition: ({ stats }) => stats.minutes >= 600,
   },
-  // add more as needed
+  {
+    icon: <Flame className="w-8 h-8 text-orange-600" />,
+    label: "7-Day Streak",
+    desc: "7 days of consecutive reading!",
+    theme: "bg-orange-200 text-orange-900 shadow-lg border-orange-800",
+    condition: ({ stats }) => stats.streak >= 7,
+  },
+  {
+    icon: <Flame className="w-8 h-8 text-red-700" />,
+    label: "30-Day Streak",
+    desc: "30 days in a row. Impressive!",
+    theme: "bg-red-200 text-red-900 shadow-xl border-red-800",
+    condition: ({ stats }) => stats.streak >= 30,
+  },
+  {
+    icon: <IconMedal className="w-8 h-8 text-green-600" />,
+    label: "Validator's Choice",
+    desc: "Hand-picked by a validator.",
+    theme: "bg-green-300 text-green-900 shadow-lg border-green-800",
+    condition: ({ rewards }) =>
+      rewards.some((r) => r.tokenType === "validator"),
+  },
+  {
+    icon: <User className="w-8 h-8 text-blue-500" />,
+    label: "5 Logs",
+    desc: "You've submitted 5 reading logs.",
+    theme: "bg-blue-200 text-blue-900 shadow-sm border-blue-800",
+    condition: ({ stats }) => stats.books >= 5,
+  },
+  {
+    icon: <User className="w-8 h-8 text-blue-800" />,
+    label: "20 Logs",
+    desc: "20 reading logs submitted. Nice!",
+    theme: "bg-blue-300 text-blue-900 shadow-md border-indigo-800",
+    condition: ({ stats }) => stats.books >= 20,
+  },
+  {
+    icon: <Star className="w-8 h-8 text-fuchsia-500" />,
+    label: "Night Owl",
+    desc: "Logged a session after midnight.",
+    theme: "bg-black text-white shadow-md border-fuchsia-800",
+    condition: ({ logs }) =>
+      logs.some(
+        (log) =>
+          new Date(log.timestamp).getHours() >= 0 &&
+          new Date(log.timestamp).getHours() < 5
+      ),
+  },
+  {
+    icon: <Sun className="w-8 h-8 text-yellow-600" />,
+    label: "Early Bird",
+    desc: "Logged a session before 7 AM.",
+    theme: "bg-yellow-100 text-yellow-900 shadow-sm border-orange-800",
+    condition: ({ logs }) =>
+      logs.some((log) => new Date(log.timestamp).getHours() < 7),
+  },
+  {
+    icon: <Star className="w-8 h-8 text-purple-600" />,
+    label: "Power Hour",
+    desc: "Logged a session over 60 minutes.",
+    theme: "bg-purple-300 text-purple-900 shadow-md border-purple-800",
+    condition: ({ logs }) => logs.some((log) => (log.duration || 0) >= 60),
+  },
+  {
+    icon: <IconGift className="w-8 h-8 text-pink-500" />,
+    label: "First Reward",
+    desc: "Claimed your first reward!",
+    theme: "bg-pink-100 text-pink-900 shadow-md border-pink-800",
+    condition: ({ rewards }) => rewards.length > 0,
+  },
+  {
+    icon: <IconCoin className="w-8 h-8 text-teal-500" />,
+    label: "Token Collector",
+    desc: "Earned over 100 tokens.",
+    theme: "bg-teal-200 text-teal-900 shadow-lg border-teal-800",
+    condition: ({ stats }) => stats.tokens >= 100,
+  },
+  {
+    icon: <IconCoin className="w-8 h-8 text-emerald-700" />,
+    label: "Token Hoarder",
+    desc: "Earned over 500 tokens.",
+    theme: "bg-emerald-300 text-emerald-900 shadow-xl border-green-800",
+    condition: ({ stats }) => stats.tokens >= 500,
+  },
+  {
+    icon: <Book className="w-8 h-8 text-cyan-600" />,
+    label: "Speed Reader",
+    desc: "Finished a book in <1 day.",
+    theme: "bg-cyan-200 text-cyan-900 shadow-md border-blue-800",
+    condition: ({ logs }) => {
+      return logs.some((log) => {
+        const started = new Date(log.startedAt || log.timestamp);
+        const ended = new Date(log.timestamp);
+        const diffHours = (ended - started) / 1000 / 60 / 60;
+        return diffHours < 24;
+      });
+    },
+  },
+  {
+    icon: <Trophy className="w-8 h-8 text-indigo-700" />,
+    label: "Legend",
+    desc: "Logged 100+ reading sessions!",
+    theme: "bg-indigo-300 text-indigo-900 shadow-2xl border-gray-800",
+    condition: ({ stats }) => stats.books >= 100,
+  },
 ];
 
 export default function WalletPage() {
@@ -114,11 +239,9 @@ export default function WalletPage() {
 
   useEffect(() => {
     if (!user?.id) {
-      // Also check for user?.id specifically
-      // Optionally clear data if user is not available
-      // setRewards([]);
-      // setOwnedItems([]);
-      // setLogs([]);
+      setRewards([]);
+      setOwnedItems([]);
+      setLogs([]);
       return;
     }
 
@@ -130,7 +253,6 @@ export default function WalletPage() {
         setRewards(rewardsResponse.data?.rewards || []);
       } catch (error) {
         console.error("Error fetching rewards:", error);
-        // Handle rewards error, e.g., toast.error("Failed to load rewards."), setRewards([])
       }
 
       try {
@@ -217,33 +339,22 @@ export default function WalletPage() {
 
   // Badge display logic
   function renderBadges() {
-    // Creative logic, e.g. match based on stats/rewards
-    const badges = [];
-    if (stats.books >= 1)
-      badges.push({
-        ...BADGE_ICONS[0],
-        desc: "Congrats! You read your first book.",
-      });
-    if (stats.books >= 10)
-      badges.push({ ...BADGE_ICONS[1], desc: "10 books read! Keep going." });
-    if (stats.streak >= 7)
-      badges.push({ ...BADGE_ICONS[2], desc: "Reading streak: 7+ days!" });
-    if (stats.minutes >= 60)
-      badges.push({ ...BADGE_ICONS[3], desc: "1 hour of reading tracked." });
-    // Validator's choice badge for any reward with validator type
-    if (rewards.some((r) => r.tokenType === "validator"))
-      badges.push({ ...BADGE_ICONS[4], desc: "Validator's Choice!" });
+    const badges = BADGE_ICONS.filter((badge) =>
+      badge.condition({ stats, rewards, logs })
+    );
 
     return badges.length ? (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5">
         {badges.map((badge, i) => (
           <Card
             key={badge.label}
-            className="flex flex-col items-center p-4 rounded-2xl shadow"
+            className={`flex mb-3 items-center justify-center w-48 h-48 rounded-full p-4 transition hover:scale-[1.03] duration-300 ${badge.theme} border-3`}
           >
-            <div className="mb-2">{badge.icon}</div>
-            <div className="font-bold text-lg">{badge.label}</div>
-            <div className="text-xs text-muted-foreground text-center">
+            <div className="animate-pulse-slow -mb-4 ">{badge.icon}</div>
+            <div className="font-extrabold text-xl tracking-wide drop-shadow">
+              {badge.label}
+            </div>
+            <div className="text-sm text-gray-600 text-center opacity-90 -mt-5">
               {badge.desc}
             </div>
           </Card>
@@ -271,37 +382,41 @@ export default function WalletPage() {
         {logs.map((log, i) => {
           const reward = rewards.find((r) => r.logId === log.id);
           return (
-            <Card key={log.id} className="flex items-center gap-4 p-4">
-              <Badge variant="secondary" className="mr-2">
+            <Card key={log.id} className="flex items-center gap-4 p-4 w-96">
+              <Badge variant="secondary" className="mr-2 -mb-2">
                 <Book className="w-4 h-4 mr-1 inline" />{" "}
-                {log.book?.title || "Book"}
+                {log?.status?.toLowerCase() || "no status"}
               </Badge>
               <div className="flex-1">
                 <div>
-                  <span className="font-semibold">{log.book?.title}</span>{" "}
+                  <span className="font-semibold">{log?.title}</span>{" "}
                   <span className="text-xs text-muted-foreground">
-                    ({log.duration} min)
+                    ({log?.duration} min)
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {log.summary?.slice(0, 100)}
+                  {log?.summary?.slice(0, 100)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(log.timestamp).toLocaleString()}
+                  {new Date(log?.timestamp).toLocaleString()}
                 </div>
               </div>
               {reward ? (
                 <Tooltip>
                   <TooltipTrigger>
-                    <Badge variant="outline" className="flex items-center">
-                      <IconCoin className="w-4 h-4 mr-1" /> {reward.tokenValue}
+                    <Badge
+                      variant="outline"
+                      className="flex items-center justify-center "
+                    >
+                      <IconCoin className="w-4 h-4 mr-1  fill-yellow-500" />{" "}
+                      {reward?.tokenValue}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {reward.tokenType} <br />
+                    {reward?.tokenType} <br />
                     <a
                       className="underline text-blue-500"
-                      href={`https://etherscan.io/tx/${reward.contractTx}`}
+                      href={`https://etherscan.io/tx/${reward?.contractTx}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -317,7 +432,6 @@ export default function WalletPage() {
     );
   }
 
-  // Owned items/NFTs grid (optional, show only if you want to display NFTs)
   function renderOwnedItems() {
     if (!ownedItems.length) return null;
     return (
@@ -326,7 +440,7 @@ export default function WalletPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {ownedItems.map((item) => (
             <Card key={item.id} className="p-4 flex flex-col items-center">
-              <IconGift className="w-6 h-6 text-pink-500 mb-2" />
+              <IconGift className="w-8 h-8 text-pink-500 mb-2" />
               <div className="font-semibold">{item.item?.title || "Item"}</div>
               {item.qrCodeUrl && (
                 <img
@@ -345,14 +459,16 @@ export default function WalletPage() {
   return (
     <div className=" px-4 py-8">
       {/* Header/Profile */}
-      <Card className="mb-8 flex flex-col md:flex-row items-center md:items-start p-6 gap-6 rounded-2xl shadow-xl w-3/4">
+      <Card className="mb-8 w-2/3 flex flex-col md:flex-row items-center md:items-start p-6 gap-6 rounded-2xl shadow-xl">
         <Avatar className="w-20 h-20 shadow">
-          {/* Replace with your avatar generator if needed */}
           <BoringAvatar
             size={64}
             name={user?.name || "default"}
-            variant={user?.AvatarSeed}
-            colors={user?.AvatarColor?.split("-")}
+            variant={user?.avatarSeed}
+            colors={
+              user?.avatarColor?.split("-") ||
+              user?.avatarColor?.split("#").map((col) => `#${col}`)
+            }
             className="w-20 h-20 rounded-full"
           />
         </Avatar>
@@ -412,72 +528,72 @@ export default function WalletPage() {
             </div>
           </div>
         </div>
-        <div>
-          <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="blue" className="flex items-center gap-2">
-                <Send className="w-4 h-4" /> Send Token
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogTitle>Send Token</DialogTitle>
-              <DialogDescription>
-                Transfer a reward token or NFT to another address.
-              </DialogDescription>
-              <div className="space-y-3 mt-4">
-                <div>
-                  <label className="block mb-1 font-medium">
-                    Recipient Address
-                  </label>
-                  <input
-                    className="w-full px-2 py-1 border rounded"
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    placeholder="0x..."
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 font-medium">Amount</label>
-                  <input
-                    className="w-full px-2 py-1 border rounded"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="(ERC20 only)"
-                    type="number"
-                  />
-                </div>
-                {/* Could add token/NFT selector here if needed */}
-                <Button
-                  onClick={handleSendToken}
-                  disabled={sending || !recipient}
-                >
-                  {sending ? "Sending..." : "Send"}
-                </Button>
-                {txHash && (
-                  <div className="text-xs text-blue-600 mt-2">
-                    Tx Hash:{" "}
-                    <a
-                      href={`https://etherscan.io/tx/${txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline"
-                    >
-                      {txHash}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
       </Card>
-      {/* Main Tabs */}
+      <div>
+        <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2 hover:cursor-pointer">
+              <Send className="w-4 h-4" /> Send Tokens to another Account
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Send Tokens to another Account</DialogTitle>
+            <DialogDescription>
+              Transfer a reward token or NFT to another address.
+            </DialogDescription>
+            <div className="space-y-3 mt-4">
+              <div>
+                <label className="block mb-1 font-medium">
+                  Recipient Address
+                </label>
+                <input
+                  className="w-full px-2 py-1 border rounded"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  placeholder="0x..."
+                />
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">Amount</label>
+                <input
+                  className="w-full px-2 py-1 border rounded"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="(ERC20 only)"
+                  type="number"
+                />
+              </div>
+
+              <Button
+                onClick={handleSendToken}
+                disabled={sending || !recipient}
+              >
+                {sending ? "Sending..." : "Send"}
+              </Button>
+              {txHash && (
+                <div className="text-xs text-blue-600 mt-2">
+                  Tx Hash:{" "}
+                  <a
+                    href={`https://etherscan.io/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {txHash}
+                  </a>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       <Tabs defaultValue="badges" className="mt-8">
         <TabsList className="mb-4 flex justify-between">
           <TabsTrigger value="badges">Badges & Rewards</TabsTrigger>
-          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+          <TabsTrigger value="activity">Log Transactions</TabsTrigger>
           {ownedItems.length > 0 && (
-            <TabsTrigger value="nfts">Owned Items</TabsTrigger>
+            <TabsTrigger value="nfts">Electronic Purchased Items</TabsTrigger>
           )}
         </TabsList>
         <TabsContent value="badges">{renderBadges()}</TabsContent>

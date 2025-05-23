@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { BookOpen, Loader2 } from "lucide-react";
 import axios from "axios";
 import confetti from "canvas-confetti";
-import WormyChat from "@/components/WormyChat";
 import { useRouter } from "next/navigation";
 
 export default function CreateLogPage() {

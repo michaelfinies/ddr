@@ -55,6 +55,7 @@ export async function POST(request) {
         preferences: true,
       },
     });
+    console.log(updatedUser);
 
     return NextResponse.json({ user: updatedUser });
   } catch (err) {

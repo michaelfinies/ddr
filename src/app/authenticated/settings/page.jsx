@@ -2,15 +2,11 @@
 import { useState } from "react";
 import { ProfileSettings } from "@/components/settings/profile-settings";
 import { AccountSettings } from "@/components/settings/account-settings";
-import { AppearanceSettings } from "@/components/settings/appearance-settings";
-import { DangerZoneSettings } from "@/components/settings/danger-zone-settings";
 
 // Sidebar nav items config
 const NAV = [
-  { key: "profile", label: "Profile" },
-  { key: "account", label: "Account" },
-  { key: "appearance", label: "Appearance" },
-  { key: "danger", label: "Danger Zone" },
+  { key: "profile", label: "Profile Information" },
+  { key: "account", label: "Account Settings" },
 ];
 
 export default function SettingsPage() {
@@ -19,7 +15,7 @@ export default function SettingsPage() {
   return (
     <div className="flex bg-[#fafafa] dark:bg-slate-900 dark:text-gray-600 min-h-screen">
       {/* Sidebar */}
-      <aside className="w-56 m-10 ml-0">
+      <aside className="w-56 m-10 ml-2">
         <nav>
           <ul className="flex flex-col gap-1">
             {NAV.map((item) => (
@@ -43,11 +39,9 @@ export default function SettingsPage() {
       {/* Main Content */}
       <main className="flex-1">
         <div className=" mx-auto">
-          <div className="bg-white dark:bg-gray-900 border rounded-2xl shadow p-2">
+          <div className="bg-white dark:bg-gray-900 border rounded-2xl shadow p-2 m-5">
             {active === "profile" && <ProfileSettings />}
             {active === "account" && <AccountSettings />}
-            {active === "appearance" && <AppearanceSettings />}
-            {active === "danger" && <DangerZoneSettings />}
           </div>
         </div>
       </main>

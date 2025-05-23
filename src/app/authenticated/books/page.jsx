@@ -222,7 +222,7 @@ export default function CombinedBookApp() {
       <img
         src={getCoverImage(book)}
         alt={book.title ? `Cover of ${book.title}` : "Book cover"}
-        className="w-full h-60 sm:h-64 object-cover rounded-xl shadow-lg border-4 border-transparent group-hover:border-blue-500 transition-all duration-300"
+        className="w-full h-60 sm:h-64 object-cover text-white rounded-xl shadow-lg border-4 border-transparent group-hover:border-blue-500 transition-all duration-300"
         onError={(e) => {
           e.target.onerror = null;
           e.target.src = "/no-cover.png";
@@ -468,12 +468,10 @@ function BookDetailModal({
 
   const handleDownload = (e) => {
     if (!downloadUrl) {
-      e.preventDefault(); // Prevent navigation if no URL
+      e.preventDefault();
       return;
     }
     setDownloading(true);
-    // Actual download is via <a> tag's href and download attribute.
-    // This just simulates a brief loading state for UX.
     setTimeout(() => setDownloading(false), 1500);
   };
 
@@ -496,7 +494,7 @@ function BookDetailModal({
   return (
     <div
       className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose} // Close on overlay click
+      onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="book-modal-title"
@@ -525,7 +523,7 @@ function BookDetailModal({
           <div className="flex-1 flex flex-col min-w-0 text-center md:text-left">
             <h2
               id="book-modal-title"
-              className="text-xl sm:text-2xl md:text-3xl font-bold mb-1"
+              className="text-xl sm:text-2xl text-white md:text-3xl font-bold mb-1"
             >
               {book.title || "Untitled"}
             </h2>

@@ -50,6 +50,7 @@ export default function LogDetailPage() {
         const data = await axios.post("/api/reading-log", {
           userId: user?.id,
           id: params?.id,
+          approvals: 2,
         });
 
         confetti({ particleCount: 120, spread: 100 });
@@ -60,7 +61,6 @@ export default function LogDetailPage() {
     }
   }
 
-  // Status icon and color
   const statusBlock = (status) => {
     switch (status) {
       case "APPROVED":
@@ -220,7 +220,11 @@ export default function LogDetailPage() {
               </div>
             ) : (
               <div className="italic text-muted-foreground flex gap-3 mt-1">
-                <TestQuiz title={log.title} summary={log.summary} />
+                <TestQuiz
+                  title={log.title}
+                  summary={log.summary}
+                  handleQuizSubmit={handleQuizSubmit}
+                />
               </div>
             )}
           </div>

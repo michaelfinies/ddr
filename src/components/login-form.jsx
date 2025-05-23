@@ -16,6 +16,7 @@ export function LoginForm({ className, ...props }) {
   const router = useRouter();
   const { setUser, user } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     console.log("zus: " + user);
@@ -35,14 +36,14 @@ export function LoginForm({ className, ...props }) {
 
     if (res.ok) {
       setUser(result.user);
-      // if (result.hasOnboarded === false) {
-      //   router.push("/onboarding");
-      // } else {
-      //   router.push("/books");
-      // }
+      if (result.hasOnboarded === false) {
+        router.push("/onboarding");
+      } else {
+        router.push("/books");
+      }
     } else {
       setLoading(false);
-      alert(result.error || "Invalid credentials");
+      setError(result.error);
     }
   };
 
@@ -105,7 +106,11 @@ export function LoginForm({ className, ...props }) {
                 )}
               </Button>
 
-              <div className="text-center text-sm">
+              <div className="h-8 text-xs text-red-500 w-full text-center">
+                {error ? error : null}
+              </div>
+
+              <div className="text-center text-sm -mt-6">
                 Don&apos;t have an account?{" "}
                 <Link href="/signup" className="underline underline-offset-4">
                   Sign up

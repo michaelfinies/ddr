@@ -7,7 +7,7 @@ export async function GET() {
   const user = JSON.parse(cookie.get("user")?.value || "null");
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const items = await prisma.ownedItem.findMany({
+  const items = await prisma.purchasedItem.findMany({
     where: { userId: user?.id },
     include: { item: true },
   });
@@ -22,7 +22,7 @@ export async function POST(request) {
 
   const { itemId, qrCodeUrl } = await request.json();
 
-  const item = await prisma.ownedItem.create({
+  const item = await prisma.purchasedItem.create({
     data: {
       userId: user?.id,
       itemId,

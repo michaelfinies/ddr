@@ -33,7 +33,7 @@ export async function POST(request) {
     });
 
     const response = NextResponse.json({
-      message: "User registered successfully",
+      message: "Authenticated",
       user: {
         id: user?.id,
         name: user?.name || null,

@@ -41,8 +41,11 @@ export function NavUser({ user }) {
                 <BoringAvatar
                   size={20}
                   name={user?.name || "default"}
-                  variant={user?.AvatarSeed}
-                  colors={user?.AvatarColor?.split("-")}
+                  variant={user?.avatarSeed}
+                  colors={
+                    user?.avatarColor?.split("-") ||
+                    user?.avatarColor?.split("#").map((col) => `#${col}`)
+                  }
                   className="w-8 h-8 rounded-full"
                 />
               </Avatar>
@@ -67,8 +70,11 @@ export function NavUser({ user }) {
                   <BoringAvatar
                     size={20}
                     name={user?.name || "default"}
-                    variant={user?.AvatarSeed}
-                    colors={user?.AvatarColor?.split("-")}
+                    variant={user?.avatarSeed}
+                    colors={
+                      user?.avatarColor?.split("-") ||
+                      user?.avatarColor?.split("#").map((col) => `#${col}`)
+                    }
                     className="w-8 h-8 rounded-full"
                   />
                 </Avatar>

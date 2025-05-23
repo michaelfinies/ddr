@@ -25,7 +25,7 @@ Book Summary: ${summary}
 `;
 }
 
-export default function TestQuiz({ title, summary }) {
+export default function TestQuiz({ title, summary, handleQuizSubmit }) {
   const [open, setOpen] = useState(false);
   const [quiz, setQuiz] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -301,7 +301,9 @@ export default function TestQuiz({ title, summary }) {
                     </div>
                     <Button
                       className="mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-lg px-8 py-4"
-                      onClick={handleClose}
+                      onClick={
+                        (handleClose(), handleQuizSubmit(correctCount >= 4))
+                      }
                     >
                       Close
                     </Button>
