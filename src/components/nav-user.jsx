@@ -6,8 +6,8 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import BoringAvatar from "boring-avatars";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,17 @@ import Link from "next/link";
 
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+
+  const handleLogOut = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+      router.replace("/login"); // Redirect to login page
+    } catch (err) {
+      // Optionally handle error (show toast, etc)
+      console.error("Logout failed", err);
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -96,7 +107,7 @@ export function NavUser({ user }) {
               </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogOut}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

@@ -1,13 +1,12 @@
 import { http, createConfig } from "wagmi";
 import { WagmiProvider } from "wagmi";
-import { mainnet, goerli } from "wagmi/chains";
-import { ReactNode } from "react";
+import { hardhat } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export const config = createConfig({
-  chains: [goerli],
+  chains: [hardhat],
   transports: {
-    [goerli.id]: http(),
+    [hardhat.id]: http(),
   },
   ssr: true,
 });

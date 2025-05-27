@@ -2,7 +2,7 @@
 const nextConfig = {
   devIndicators: {
     // buildActivity: false, // This specifically hides the build activity indicator
-    buildActivityPosition: "top-right", // You can still specify position even if not shown
+    position: "top-right", // You can still specify position even if not shown
   },
   async rewrites() {
     return [

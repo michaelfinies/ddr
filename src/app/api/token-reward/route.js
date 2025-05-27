@@ -24,6 +24,18 @@ export async function GET() {
 export async function POST(request) {
   const { logId, tokenType, tokenValue, contractTx } = await request.json();
 
+  // Check if reward already exists
+  const existing = await prisma.tokenReward.findUnique({
+    where: { logId },
+  });
+
+  if (existing) {
+    return Response.json(
+      { success: false, error: "Reward already exists" },
+      { status: 400 }
+    );
+  }
+
   const reward = await prisma.tokenReward.create({
     data: {
       logId,

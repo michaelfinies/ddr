@@ -6,31 +6,32 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { motion } from "framer-motion";
 
-const SCHOOL_LIST = [
-  "University of Curaçao", // Corrected spelling
-  "University of the Dutch Caribbean", // Corrected spelling
-  "Kolegio Alejandro Paula", // Corrected spelling
-  "Radulphus College", // Corrected spelling
-  "University of Aruba",
-  "Erasmus University Rotterdam", // Netherlands
-  "University of Amsterdam", // Netherlands
-  "Leiden University", // Netherlands
-  "Harvard University", // USA
-  "Stanford University", // USA
-  "Massachusetts Institute of Technology (MIT)", // USA
-  "University of Oxford", // UK
-  "University of Cambridge", // UK
-  "Sorbonne University", // France
-  "University of Tokyo", // Japan
-  "National University of Singapore", // Singapore
-  "University of Melbourne", // Australia
-  "University of Toronto", // Canada
-];
+// const SCHOOL_LIST = [
+//   "University of Curaçao", // Corrected spelling
+//   "University of the Dutch Caribbean", // Corrected spelling
+//   "Kolegio Alejandro Paula", // Corrected spelling
+//   "Radulphus College", // Corrected spelling
+//   "University of Aruba",
+//   "Erasmus University Rotterdam", // Netherlands
+//   "University of Amsterdam", // Netherlands
+//   "Leiden University", // Netherlands
+//   "Harvard University", // USA
+//   "Stanford University", // USA
+//   "Massachusetts Institute of Technology (MIT)", // USA
+//   "University of Oxford", // UK
+//   "University of Cambridge", // UK
+//   "Sorbonne University", // France
+//   "University of Tokyo", // Japan
+//   "National University of Singapore", // Singapore
+//   "University of Melbourne", // Australia
+//   "University of Toronto", // Canada
+// ];
 
 function Combobox({ value, setValue, options }) {
   const [search, setSearch] = useState("");
-  const filtered = options.filter((option) =>
-    option.toLowerCase().includes(search.toLowerCase())
+  const SCHOOL_LIST = options;
+  const filtered = options?.filter((option) =>
+    option?.toLowerCase()?.includes(search?.toLowerCase())
   );
 
   return (
@@ -44,7 +45,7 @@ function Combobox({ value, setValue, options }) {
         }}
         className="mb-2"
       />
-      {search && !SCHOOL_LIST.includes(search) && filtered.length > 0 && (
+      {search && !SCHOOL_LIST?.includes(search) && filtered.length > 0 && (
         <div className="border rounded-md shadow bg-white absolute z-10 w-full">
           {filtered.map((option) => (
             <div
@@ -64,15 +65,21 @@ function Combobox({ value, setValue, options }) {
   );
 }
 
-export function AudienceStep({ profile, setProfile, onNext }) {
+export function AudienceStep({ profile, setProfile, onNext, schools }) {
   const [role, setRole] = useState(profile.role || "student");
   const [school, setSchool] = useState(profile.school || "");
+  const SCHOOL_LIST = schools
+    .filter((s) => s.isActive === false || role === "student")
+    .map((s) => s.name);
 
   const handleNext = () => {
     setProfile({
       ...profile,
       role,
       school: role !== "other" ? school : "",
+      schoolId: schools.find(
+        (s) => s?.name?.toLowerCase() === school?.toLowerCase()
+      ).id,
       name: role === "school" ? school : "",
     });
     onNext();

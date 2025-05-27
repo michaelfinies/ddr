@@ -7,9 +7,10 @@ import {
   useConnect,
   useDisconnect,
   useEnsName,
-  useBalance,
+  useReadContract,
 } from "wagmi";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { REWARD_TOKEN_ABI, REWARD_TOKEN_ADDRESS } from "@/constants/contracts";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -20,16 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Copy,
   Wallet,
-  Send,
   Trophy,
   Book,
   Star,
@@ -39,13 +32,14 @@ import {
   Clock,
 } from "lucide-react";
 
-import { IconBook, IconMedal, IconGift, IconCoin } from "@tabler/icons-react";
+import { IconMedal, IconGift, IconCoin } from "@tabler/icons-react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
+import { QRCodeCanvas } from "qrcode.react";
 
 function shortAddress(addr) {
-  return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
+  return addr ? addr.slice(0, 10) + "..." + addr.slice(-10) : "";
 }
 
 const BADGE_ICONS = [
@@ -201,9 +195,6 @@ const BADGE_ICONS = [
 
 export default function WalletPage() {
   const { user } = useAuthStore();
-
-  const [sending, setSending] = useState(false);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [rewards, setRewards] = React.useState([]);
   const [ownedItems, setOwnedItems] = React.useState([]);
   const [logs, setLogs] = React.useState([]);
@@ -219,23 +210,14 @@ export default function WalletPage() {
     useConnect();
   const { disconnect } = useDisconnect();
 
-  if (!isConnected) {
-  }
-
-  // useEffect(() => {
-  //   if (isConnected && address) {
-  //     setWallet({ address });
-  //   }
-  // }, [address, isConnected, setWallet]);
-
-  const metamaskConnector = connectors.find((c) => c.name === "MetaMask");
-
-  // Send token form
-  const [sendType, setSendType] = useState("token");
-  const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("");
-  const [selectedToken, setSelectedToken] = useState(null);
-  const [txHash, setTxHash] = useState("");
+  const { data: tokenBalance, refetch: refetchTokenBalance } = useReadContract({
+    address: REWARD_TOKEN_ADDRESS,
+    abi: REWARD_TOKEN_ABI,
+    functionName: "balanceOf",
+    args: [address],
+    watch: true,
+    enabled: !!address,
+  });
 
   useEffect(() => {
     if (!user?.id) {
@@ -277,7 +259,6 @@ export default function WalletPage() {
     fetchData();
   }, [user]);
 
-  // Quick stats
   React.useEffect(() => {
     setStats({
       books: logs.length,
@@ -287,15 +268,7 @@ export default function WalletPage() {
     });
   }, [logs, rewards]);
 
-  // For live token balance
-  const { data: balanceData } = useBalance({
-    address: address,
-    watch: true,
-    enabled: !!address,
-  });
-
   function calcStreak(logs) {
-    // simple: 1 per consecutive day, real streak logic may be more involved
     const dates = logs
       .map((l) => l.timestamp?.slice(0, 10))
       .sort()
@@ -319,25 +292,6 @@ export default function WalletPage() {
     return streak;
   }
 
-  // Send token handler (dummy, replace with wagmi contract write as needed)
-  async function handleSendToken() {
-    setSending(true);
-    try {
-      // If ERC20: use wagmi writeContract or ethers.js
-      // If NFT: similar
-      // For demo: just show a fake tx hash
-      setTimeout(() => {
-        setTxHash("0x" + Math.random().toString(16).slice(2, 18));
-        setSending(false);
-        toast.success("Token sent!");
-      }, 1500);
-    } catch (e) {
-      toast.error("Error sending token.");
-      setSending(false);
-    }
-  }
-
-  // Badge display logic
   function renderBadges() {
     const badges = BADGE_ICONS.filter((badge) =>
       badge.condition({ stats, rewards, logs })
@@ -368,7 +322,6 @@ export default function WalletPage() {
     );
   }
 
-  // Activity timeline (reading logs + rewards)
   function renderActivity() {
     if (!logs.length)
       return (
@@ -433,6 +386,8 @@ export default function WalletPage() {
   }
 
   function renderOwnedItems() {
+    const [showQrId, setShowQrId] = React.useState(null);
+
     if (!ownedItems.length) return null;
     return (
       <div>
@@ -440,14 +395,36 @@ export default function WalletPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {ownedItems.map((item) => (
             <Card key={item.id} className="p-4 flex flex-col items-center">
-              <IconGift className="w-8 h-8 text-pink-500 mb-2" />
-              <div className="font-semibold">{item.item?.title || "Item"}</div>
+              <IconGift className="w-12 h-12 text-blue-500 -mb-4" />
+              <div className="font-semibold -mb-4">
+                {item.item?.title || "Item"}
+              </div>
               {item.qrCodeUrl && (
                 <img
                   src={item.qrCodeUrl}
                   alt="QR"
-                  className="w-12 h-12 rounded mt-2"
+                  className="w-12 h-12 rounded"
                 />
+              )}
+              <Button
+                className="-mb-1 "
+                onClick={() =>
+                  setShowQrId(showQrId === item.id ? null : item.id)
+                }
+              >
+                {showQrId === item.id ? "Hide QR Code" : "Generate QR Code"}
+              </Button>
+              {showQrId === item.id && (
+                <div className="mt-1 flex flex-col items-center">
+                  <QRCodeCanvas
+                    value={`${window.location.origin}/redeem/${item.id}`}
+                    size={180}
+                    level="H"
+                  />
+                  <div className="text-xs text-muted-foreground mt-1 text-center">
+                    Scan to redeem (removes from wallet)
+                  </div>
+                </div>
               )}
             </Card>
           ))}
@@ -457,7 +434,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className=" px-4 py-8">
+    <div className="px-4 py-8">
       {/* Header/Profile */}
       <Card className="mb-8 w-2/3 flex flex-col md:flex-row items-center md:items-start p-6 gap-6 rounded-2xl shadow-xl">
         <Avatar className="w-20 h-20 shadow">
@@ -479,7 +456,9 @@ export default function WalletPage() {
           <CardDescription className="mb-2">{user?.email}</CardDescription>
           <div className="flex items-center gap-2 mb-2">
             <Wallet className="w-4 h-4 text-blue-600" />
-            <span className="font-mono">{user?.walletAddress}</span>
+            <span className="font-mono">
+              {shortAddress(user?.walletAddress)}
+            </span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -507,20 +486,33 @@ export default function WalletPage() {
             ) : (
               <Button
                 size="sm"
-                onClick={() => connect({ connector: metamaskConnector })}
+                onClick={() =>
+                  connect({
+                    connector: connectors.find((c) => c.name === "MetaMask"),
+                  })
+                }
               >
-                Connect MetaMask
+                Connect
               </Button>
             )}
           </div>
-          <div className="flex gap-4 mt-2">
+
+          {/* Quick stats */}
+          <div className="flex gap-4 mt-4">
             <div>
               <div className="font-bold text-lg">{stats.books}</div>
               <div className="text-xs text-muted-foreground">Books Read</div>
             </div>
             <div>
-              <div className="font-bold text-lg">{stats.tokens}</div>
-              <div className="text-xs text-muted-foreground">Tokens Earned</div>
+              <div className="font-bold text-lg">
+                {tokenBalance !== undefined
+                  ? (Number(tokenBalance) / 10 ** 18).toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 4 }
+                    )
+                  : stats.tokens}
+              </div>
+              <div className="text-xs text-muted-foreground">Token balance</div>
             </div>
             <div>
               <div className="font-bold text-lg">{stats.streak}</div>
@@ -529,71 +521,13 @@ export default function WalletPage() {
           </div>
         </div>
       </Card>
-      <div>
-        <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 hover:cursor-pointer">
-              <Send className="w-4 h-4" /> Send Tokens to another Account
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogTitle>Send Tokens to another Account</DialogTitle>
-            <DialogDescription>
-              Transfer a reward token or NFT to another address.
-            </DialogDescription>
-            <div className="space-y-3 mt-4">
-              <div>
-                <label className="block mb-1 font-medium">
-                  Recipient Address
-                </label>
-                <input
-                  className="w-full px-2 py-1 border rounded"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder="0x..."
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium">Amount</label>
-                <input
-                  className="w-full px-2 py-1 border rounded"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="(ERC20 only)"
-                  type="number"
-                />
-              </div>
-
-              <Button
-                onClick={handleSendToken}
-                disabled={sending || !recipient}
-              >
-                {sending ? "Sending..." : "Send"}
-              </Button>
-              {txHash && (
-                <div className="text-xs text-blue-600 mt-2">
-                  Tx Hash:{" "}
-                  <a
-                    href={`https://etherscan.io/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    {txHash}
-                  </a>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
       <Tabs defaultValue="badges" className="mt-8">
         <TabsList className="mb-4 flex justify-between">
           <TabsTrigger value="badges">Badges & Rewards</TabsTrigger>
           <TabsTrigger value="activity">Log Transactions</TabsTrigger>
           {ownedItems.length > 0 && (
-            <TabsTrigger value="nfts">Electronic Purchased Items</TabsTrigger>
+            <TabsTrigger value="nfts"> Purchased Items</TabsTrigger>
           )}
         </TabsList>
         <TabsContent value="badges">{renderBadges()}</TabsContent>

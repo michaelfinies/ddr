@@ -1,4 +1,5 @@
 "use client";
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +30,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+
+import { useWalletClient } from "wagmi";
+import {
+  SUBMISSION_MANAGER_ABI,
+  SUBMISSION_MANAGER_ADDRESS,
+} from "@/constants/contracts";
+
 const themePresets = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
@@ -47,6 +55,7 @@ const passwordSchema = z.object({
 export function AccountSettings() {
   const [open, setOpen] = React.useState(false);
   const [theme, setTheme] = React.useState("system");
+  const { data: walletClient } = useWalletClient();
 
   const form = useForm({
     resolver: zodResolver(appearanceSchema),
@@ -66,13 +75,6 @@ export function AccountSettings() {
     });
   }
 
-  function handleDeleteAccount() {
-    setOpen(false);
-    toast.error("Account deleted!", {
-      description: "Your account has been permanently deleted.",
-    });
-    // Call your API here for actual delete
-  }
   const passwordForm = useForm({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -88,8 +90,42 @@ export function AccountSettings() {
     passwordForm.reset();
   }
 
+  function handleDeleteAccount() {
+    setOpen(false);
+    toast.error("Account deleted!", {
+      description: "Your account has been permanently deleted.",
+    });
+    // Call your API here for actual delete
+  }
+
+  async function handleGrantTeacherRole() {
+    if (!walletClient) {
+      toast.error("Connect wallet first.");
+      return;
+    }
+
+    try {
+      const txHash = await walletClient.writeContract({
+        address: SUBMISSION_MANAGER_ADDRESS,
+        abi: SUBMISSION_MANAGER_ABI,
+        functionName: "addTeacher",
+        args: ["0x70997970C51812dc3A010C7d01b50e0d17dc79C8"],
+      });
+
+      toast.success("You're now a teacher!", {
+        description: `Tx sent: ${txHash}`,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to grant teacher role", {
+        description: err.message || "Check console for details",
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Password Card */}
       <Card>
         <CardContent>
           <Form {...passwordForm}>
@@ -105,7 +141,7 @@ export function AccountSettings() {
                     <FormLabel>Current Password</FormLabel>
                     <FormControl>
                       <Input
-                        className={"w-72"}
+                        className="w-72"
                         type="password"
                         placeholder="Current password"
                         {...field}
@@ -123,7 +159,7 @@ export function AccountSettings() {
                     <FormLabel>New Password</FormLabel>
                     <FormControl>
                       <Input
-                        className={"w-72"}
+                        className="w-72"
                         type="password"
                         placeholder="New password"
                         {...field}
@@ -140,6 +176,8 @@ export function AccountSettings() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Theme Selection Card */}
       <Card>
         <CardContent>
           <Form {...form}>
@@ -179,6 +217,24 @@ export function AccountSettings() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Grant Teacher Role Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin Access</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-muted-foreground -mt-4">
+            You have been approved for Admin wallet Access, click below to
+            authorize your wallet for approving student logs on-chain.
+          </p>
+          <Button onClick={handleGrantTeacherRole} className="w-64">
+            Grant Teacher Role
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Delete Account Card */}
       <Card>
         <CardHeader className="-mb-3">
           <CardTitle>Delete your Readify Account</CardTitle>

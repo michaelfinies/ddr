@@ -25,7 +25,7 @@ const THEME_OPTIONS = [
   },
 ];
 
-export function ProfileStep({ profile, setProfile, onNext }) {
+export function ProfileStep({ profile, setProfile, onNext, isSchool }) {
   const [selectedAvatarSeed, setSelectedAvatarSeed] = useState(
     profile.avatarSeed || AVATAR_SEEDS[0]
   );
@@ -58,6 +58,7 @@ export function ProfileStep({ profile, setProfile, onNext }) {
         <Input
           id="displayName"
           placeholder="ExampleReader57"
+          disabled={isSchool}
           value={profile.name}
           onChange={(e) => setProfile({ ...profile, name: e.target.value })}
           required

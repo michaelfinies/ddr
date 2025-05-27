@@ -84,33 +84,54 @@ export default function CombinedBookApp() {
   // Fetch books by topic
   useEffect(() => {
     const loadBooksByTopic = async () => {
-      setLoadingGlobal(true);
-      setLoadingTopics(true);
-      const topicPromises = TOPICS.map(async (topic) => {
+      // setLoadingGlobal(true);
+      // setLoadingTopics(true);
+      const cached = localStorage.getItem("booksByTopic");
+      if (cached) {
+        setBooksByTopic(JSON.parse(cached));
+        setLoadingTopics(false);
+        setLoadingGlobal(false);
+        return;
+      }
+
+      let allBooksByTopic = {};
+
+      for (const element of TOPICS) {
         try {
-          // Adding mime_type to prefer books with covers
           const res = await fetch(
-            `${GUTENDEX_API_BASE}?topic=${topic}&page=1&mime_type=image%2Fjpeg`
+            `${GUTENDEX_API_BASE}?topic=${element}&page=1&limit=5&mime_type=image%2Fjpeg`
           );
-          if (!res.ok) throw new Error(`Failed to fetch ${topic}`);
+
+          if (!res.ok) throw new Error(`Failed to fetch ${element}`);
           const data = await res.json();
-          return [topic, data.results || []];
+          const results = data.results || [];
+          // Use functional update to avoid stale state issues
+          setBooksByTopic((prev) => ({
+            ...prev,
+            [element]: results,
+          }));
+          allBooksByTopic[element] = results;
         } catch (error) {
-          console.error(`Error fetching ${topic}:`, error);
-          return [topic, []]; // Return empty array on error for this topic
+          console.error(`Error fetching ${element}:`, error);
+          setBooksByTopic((prev) => ({
+            ...prev,
+            [element]: [],
+          }));
+          allBooksByTopic[element] = [];
         }
-      });
-      const results = await Promise.all(topicPromises);
-      setBooksByTopic(
-        Object.fromEntries(
-          results.filter((entry) => entry[1] && entry[1].length > 0)
-        )
-      );
-      setLoadingTopics(false);
-      setLoadingGlobal(false);
+        setLoadingTopics(false);
+        setLoadingGlobal(false);
+      }
+
+      // Save to localStorage after all fetches are done
+      localStorage.setItem("booksByTopic", JSON.stringify(allBooksByTopic));
     };
     loadBooksByTopic();
   }, []);
+
+  useEffect(() => {
+    console.log(booksByTopic);
+  }, [booksByTopic]);
 
   // Load from LocalStorage
   useEffect(() => {

@@ -10,9 +10,17 @@ import { BookOpen, Loader2 } from "lucide-react";
 import axios from "axios";
 import confetti from "canvas-confetti";
 import { useRouter } from "next/navigation";
+import {
+  SUBMISSION_MANAGER_ABI,
+  SUBMISSION_MANAGER_ADDRESS,
+} from "@/constants/contracts";
+import { useWalletClient, usePublicClient } from "wagmi";
+import { keccak256, toBytes, decodeEventLog } from "viem";
 
 export default function CreateLogPage() {
   const { user } = useAuthStore();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState("");
   const [summary, setSummary] = useState("");
@@ -20,7 +28,6 @@ export default function CreateLogPage() {
 
   const summaryWordCount = summary.trim().split(/\s+/).filter(Boolean).length;
 
-  // LocalStorage: auto-save/load summary, title, duration
   useEffect(() => {
     setTitle(localStorage.getItem("logTitle") || "");
     setDuration(localStorage.getItem("logDuration") || "");
@@ -45,46 +52,85 @@ export default function CreateLogPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     if (!title || !duration || !summary) {
       toast.error("Please fill in all fields.");
       return;
     }
+
     if (summaryWordCount < 100) {
       toast.error("Summary must be at least 100 words.");
       return;
     }
+
+    if (!walletClient || !user?.walletAddress) {
+      toast.error("Wallet not connected");
+      return;
+    }
+
     setSubmitting(true);
+
     try {
-      // Submit the log
-      await axios.post("/api/reading-log", {
-        userId: user?.id,
-        title: title.trim(),
-        duration: parseInt(duration, 10),
-        approvals: 1,
-        summary: summary.trim(),
+      const summaryHash = keccak256(toBytes(summary.trim()));
+
+      // ✅ 1. Call the contract
+      const txHash = await walletClient.writeContract({
+        address: SUBMISSION_MANAGER_ADDRESS,
+        abi: SUBMISSION_MANAGER_ABI,
+        functionName: "submitSummary",
+        args: [user.name, title.trim(), summaryHash, BigInt(duration)],
       });
-      // Confetti and clear form
+
+      // ✅ 2. Wait for confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      // ✅ 3. Decode the SummarySubmitted event
+      const summaryEvent = receipt.logs.find(
+        (log) =>
+          log.address.toLowerCase() === SUBMISSION_MANAGER_ADDRESS.toLowerCase()
+      );
+
+      if (!summaryEvent) throw new Error("No SummarySubmitted event found");
+
+      const decoded = decodeEventLog({
+        abi: SUBMISSION_MANAGER_ABI,
+        data: summaryEvent.data,
+        topics: summaryEvent.topics,
+        eventName: "SummarySubmitted",
+      });
+
+      const index = Number(decoded.args.index);
+
+      // ✅ 4. Store in DB
+      await axios.post("/api/reading-log", {
+        userId: user.id,
+        title: title.trim(),
+        duration: parseInt(duration),
+        summary: summary.trim(),
+        summaryHash,
+        approvals: 1,
+        contractIndex: index,
+      });
+
+      // ✅ 5. Reset form and trigger animations
       confetti({ particleCount: 120, spread: 100 });
       toast.success("Reading log submitted!");
+
       localStorage.removeItem("logTitle");
       localStorage.removeItem("logDuration");
       localStorage.removeItem("logSummary");
+
       setTitle("");
       setDuration("");
       setSummary("");
-      // Re-fetch log count to see if a badge is earned
-      const res = await axios.get(
-        "/api/reading-logs?userId=" + user?.id + "&status=APPROVED"
-      );
-      const newCount = res.data?.logs?.length || 0;
-
       confetti({ particleCount: 250, spread: 130, origin: { y: 0.7 } });
 
-      setLogCount(newCount);
       router.push("/logs");
     } catch (e) {
+      console.error("Submission failed:", e);
       toast.error("Failed to submit log.");
-    } finally {
       setSubmitting(false);
     }
   }

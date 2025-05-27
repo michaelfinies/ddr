@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import { Card, CardContent } from "@/components/ui/card";
 import TestQuiz from "@/components/TestQuiz";
 import {
@@ -18,6 +21,9 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 
+// Optionally, import user context if you need current user id
+// import { useAuth } from "@/context/AuthContext";
+
 export default function LogDetailPage() {
   const params = useParams();
   const id = params?.id;
@@ -25,38 +31,42 @@ export default function LogDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Optionally: const { user } = useAuth();
+
+  const fetchLog = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/reading-log/${id}`);
+      const data = await res.json();
+      if (!res.ok || !data.success)
+        throw new Error(data.error || "Failed to fetch log");
+      setLog(data.log);
+    } catch (err) {
+      setError(err.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
-    const fetchLog = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/reading-log/${id}`);
-        const data = await res.json();
-        if (!res.ok || !data.success)
-          throw new Error(data.error || "Failed to fetch log");
-        setLog(data.log);
-      } catch (err) {
-        setError(err.message || "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchLog();
+    // eslint-disable-next-line
   }, [id]);
 
   async function handleQuizSubmit(passed) {
     if (passed) {
       try {
-        const data = await axios.post("/api/reading-log", {
-          userId: user?.id,
-          id: params?.id,
+        await axios.patch(`/api/reading-log/${params?.id}`, {
           approvals: 2,
         });
 
+        setLog((prev) => prev && { ...prev, approvals: 2 });
+
         confetti({ particleCount: 120, spread: 100 });
+        toast.success("Quiz passed! Approval updated.");
       } catch (e) {
         toast.error("Failed to submit log.");
-      } finally {
       }
     }
   }
@@ -157,29 +167,32 @@ export default function LogDetailPage() {
               {log.summary}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <div className="font-medium text-muted-foreground">
-                Reviewer / Validator
-              </div>
-              <div className="flex items-center gap-2 text-lg">
-                <UserCheck className="w-5 h-5 text-primary" />
-                {log.reviewer || log.validatorId || (
+          {log.validator && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <div className="font-medium text-muted-foreground">
+                  Reviewer / Validator
+                </div>
+                <div className="flex items-center gap-2 text-lg">
+                  <UserCheck className="w-5 h-5 text-primary" />
+
                   <span className="italic text-muted-foreground">
-                    Not assigned
+                    {log.validator}
                   </span>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <div className="space-y-2">
             <div className="font-medium text-muted-foreground">
-              Blockchain Hash
+              Identification Hash
             </div>
             <div className="flex items-center gap-2 text-lg">
               <Hash className="w-5 h-5 text-primary" />
-              {log.hash ? (
-                <span className="break-all">{log.hash}</span>
+              {log.logHash ? (
+                <span className="break-all text-sm font-medium text-muted-foreground">
+                  {log.logHash}
+                </span>
               ) : (
                 <span className="italic text-muted-foreground">
                   Not available
@@ -187,29 +200,31 @@ export default function LogDetailPage() {
               )}
             </div>
           </div>
-          <div>
-            <div className="font-medium text-muted-foreground mb-1">
-              Token Reward
-            </div>
-            {log.reward ? (
-              <div className="flex items-center gap-4 bg-green-50 p-4 rounded-xl border border-green-200">
-                <Gift className="w-6 h-6 text-green-700" />
-                <div>
-                  <div className="font-semibold text-green-700">
-                    {log.reward.tokenValue} {log.reward.tokenType}
-                  </div>
-                  <div className="text-xs text-green-900">
-                    Transaction:{" "}
-                    <span className="break-all">{log.reward.contractTx}</span>
+          {log?.reward && (
+            <div>
+              <div className="font-medium text-muted-foreground mb-1">
+                Token Reward
+              </div>
+              {log.reward ? (
+                <div className="flex items-center gap-4 bg-green-50 p-4 rounded-xl border border-green-200">
+                  <Gift className="w-6 h-6 text-green-700" />
+                  <div>
+                    <div className="font-semibold text-green-700">
+                      {log.reward.tokenValue} {log.reward.tokenType}
+                    </div>
+                    <div className="text-xs text-green-900">
+                      Transaction:{" "}
+                      <span className="break-all">{log.reward.contractTx}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="italic text-muted-foreground">
-                No reward assigned
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="italic text-muted-foreground">
+                  No reward assigned
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <div className="font-medium text-muted-foreground mb-1">
               Verification Quiz
@@ -228,6 +243,14 @@ export default function LogDetailPage() {
               </div>
             )}
           </div>
+          {log?.feedback && (
+            <div>
+              <div className="font-semibold mb-2 text-gray-500">Feedback</div>
+              <div className="rounded-lg bg-muted p-4 text-foreground text-base whitespace-pre-line">
+                {log?.feedback}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

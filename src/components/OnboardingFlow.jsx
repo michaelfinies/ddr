@@ -1,8 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "../lib/utils";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { WelcomeStep } from "./onboarding/welcomeStep";
 import { ProfileStep } from "./onboarding/ProfileStep";
 import { WalletStep } from "./onboarding/walletStep";
@@ -12,7 +12,7 @@ import { FinishStep } from "./onboarding/FinishStep";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { AudienceStep } from "./onboarding/StudentOrSchoolStep";
-import { useEffect } from "react";
+
 const STEPS = [
   "Welcome",
   "Audience",
@@ -23,7 +23,6 @@ const STEPS = [
   "Finish",
 ];
 
-// Progress bar
 function ProgressBar({ step }) {
   return (
     <div className="flex items-center justify-center gap-2 my-6">
@@ -33,7 +32,7 @@ function ProgressBar({ step }) {
           className={cn(
             "h-2 w-8 rounded-full transition-all duration-300",
             i <= step
-              ? "bg-gradient-to-r from-blue-500 to-indigo-400"
+              ? "bg-gradient-to-r from-blue-300 to-blue-600"
               : "bg-gray-200"
           )}
         />
@@ -47,16 +46,44 @@ export function OnboardingFlow({ className }) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [schools, setSchools] = useState([]);
   const router = useRouter();
+  const userData = user;
 
   useEffect(() => {
-    console.log(user);
-  }, [user]);
+    const fetchSchools = async () => {
+      try {
+        const res = await fetch("/api/schools");
+        const data = await res.json();
+        setSchools(data);
+      } catch (error) {
+        console.error("Error fetching schools:", error);
+        setSchools([]);
+      }
+    };
+    fetchSchools();
+  }, []);
+  useEffect(() => {
+    const payload = {
+      id: userData?.id,
+      email: userData?.email,
+      name: profile.name,
+      avatarSeed: profile.avatarSeed,
+      avatarColor: profile.avatarColor,
+      walletAddress: wallet.address,
+      genres: prefs.genres || [],
+      goal: prefs.goal || null,
+      hasOnboarded: true,
+      isAdmin: profile.role === "school" || false,
+      school: profile.schoolId,
+    };
+    console.log(payload);
+  }, [step]);
 
   const [profile, setProfile] = useState({
     name: "",
     avatarSeed: "pixel",
-    avatarColor: "#92A1C6#146A7C#F0AB3D#C271B4#C20D90",
+    avatarColor: "#92A1C6-#146A7C-#F0AB3D-#C271B4-#C20D90",
   });
   const [wallet, setWallet] = useState({ address: "" });
   const [prefs, setPrefs] = useState({ genres: [], goal: "" });
@@ -69,21 +96,19 @@ export function OnboardingFlow({ className }) {
 
   async function handleFinish() {
     setLoading(true);
-    setError("");
-    console.log("this is the user" + user);
-
     try {
       const payload = {
-        email: user?.email,
+        id: userData?.id,
+        email: userData?.email,
         name: profile.name,
         avatarSeed: profile.avatarSeed,
         avatarColor: profile.avatarColor,
         walletAddress: wallet.address,
-        genres: prefs.genres,
-        goal: prefs.goal,
+        genres: prefs.genres || [],
+        goal: prefs.goal || null,
         hasOnboarded: true,
-        isSchool: profile.role === "school" || false,
-        school: profile.school || null,
+        isAdmin: profile.role === "school" || false,
+        school: profile.schoolId,
       };
 
       const res = await fetch("/api/user", {
@@ -92,30 +117,27 @@ export function OnboardingFlow({ className }) {
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
+      const response = await res.json();
 
       if (res.ok) {
-        setUser(res.updatedUser);
-        router.push("/books");
+        setUser(response.user);
+        router.replace("/books");
       }
-      if (!res.ok) throw new Error(json.error || "Unknown error");
-
-      setStep(step + 1);
     } catch (err) {
       setError(err.message || "Submission failed");
-    } finally {
-      setLoading(false);
     }
   }
 
   const steps = [
     <WelcomeStep onNext={() => setStep(step + 1)} />,
     <AudienceStep
+      schools={schools}
       profile={profile}
       setProfile={setProfile}
       onNext={() => setStep(step + 1)}
     />,
     <ProfileStep
+      isSchool={profile.role === "school"}
       profile={profile}
       setProfile={setProfile}
       onNext={() => setStep(step + 1)}
@@ -124,7 +146,7 @@ export function OnboardingFlow({ className }) {
     <WalletStep
       wallet={wallet}
       setWallet={setWallet}
-      onNext={() => setStep(step + 1)}
+      onNext={() => setStep(step + (profile.role === "school" ? 2 : 1))}
     />,
     <PreferencesStep
       prefs={prefs}

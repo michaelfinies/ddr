@@ -1,6 +1,12 @@
 // Example: /api/reading-log/index.js (GET, POST)
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
+const crypto = require("crypto");
+
+function hashLog(title, summary) {
+  const combined = `${title}:${summary}`;
+  return crypto.createHash("sha256").update(combined, "utf8").digest("hex");
+}
 
 export async function GET() {
   const cookie = await cookies();
@@ -16,11 +22,14 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  const cookie = cookies();
+  const cookie = await cookies();
   const user = JSON.parse(cookie.get("user")?.value || "null");
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { duration, summary, title, approvals } = await request.json();
+  const { duration, summary, title, approvals, contractIndex } =
+    await request.json();
+
+  const logHash = hashLog(title, summary);
 
   const log = await prisma.readingLog.create({
     data: {
@@ -29,7 +38,9 @@ export async function POST(request) {
       summary,
       title,
       approvals,
+      contractIndex,
       status: "PENDING",
+      logHash,
     },
   });
 

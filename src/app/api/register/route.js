@@ -13,7 +13,7 @@ export async function POST(request) {
       );
     }
 
-    const existingUser = await prisma?.user?.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user?.create({
+    const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -32,29 +32,32 @@ export async function POST(request) {
       },
     });
 
+    const userData = {
+      id: user?.id,
+      email: user?.email,
+      name: user?.name,
+      avatarSeed: user?.avatarSeed,
+      avatarColor: user?.avatarColor,
+      walletAddress: user?.walletAddress,
+      genres: user?.genres,
+      goal: user?.goal,
+      hasOnboarded: user?.hasOnboarded,
+      isAdmin: user?.isAdmin,
+      schoolId: user?.schoolId,
+    };
+
     const response = NextResponse.json({
       message: "Authenticated",
-      user: {
-        id: user?.id,
-        name: user?.name || null,
-        email: user?.email || null,
-        walletAddress: user?.walletAddress || null,
-        avatarSeed: user?.avatarSeed || null,
-        avatarColor: user?.avatarColor || null,
-        hasOnboarded: user?.hasOnboarded || null,
-      },
+      user: userData,
     });
 
     response.cookies.set(
       "user",
       JSON.stringify({
-        id: user?.id,
-        name: user?.name,
-        email: user?.email,
-        walletAddress: user?.walletAddress,
-        avatarSeed: user?.avatarSeed,
-        avatarColor: user?.avatarColor,
-        hasOnboarded: user?.hasOnboarded,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
       }),
       {
         httpOnly: true,

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,83 +11,170 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ShoppingCart, Coins, Package, Loader, XCircle } from "lucide-react";
+import {
+  ShoppingCart,
+  Coins,
+  Package,
+  Loader2,
+  XCircle,
+  CheckCircle2,
+} from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
+import axios from "axios";
+import { REWARD_TOKEN_ABI, REWARD_TOKEN_ADDRESS } from "@/constants/contracts";
+
+const STORE_RECEIVER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+const TOKEN_CONTRACT = REWARD_TOKEN_ADDRESS;
+const TOKEN_ABI = REWARD_TOKEN_ABI;
+const TOKEN_DECIMALS = 18;
 
 export default function StorePage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userTokens, setUserTokens] = useState(null);
+  const [userTokens, setUserTokens] = useState(0);
   const [selectedItem, setSelectedItem] = useState(null);
   const [buying, setBuying] = useState(false);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
-  const { user, setUser } = useAuthStore();
+  const user = useAuthStore((u) => u.user);
+  const schoolId = user?.schoolId;
+
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, isLoading: connecting } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  // 1. Fetch user token balance with hook
+  const {
+    data: tokenBalanceRaw,
+    refetch: refetchTokenBalance,
+    isLoading: loadingBalance,
+  } = useReadContract({
+    address: TOKEN_CONTRACT,
+    abi: TOKEN_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    watch: true,
+    enabled: !!address,
+  });
+
+  // 2. Wagmi v2 write hook
+  const { writeContractAsync } = useWriteContract();
+
+  // 3. Keep userTokens up to date
+  useEffect(() => {
+    if (tokenBalanceRaw !== undefined && tokenBalanceRaw !== null) {
+      let raw;
+      if (typeof tokenBalanceRaw === "bigint") {
+        raw = tokenBalanceRaw;
+      } else if (typeof tokenBalanceRaw === "string") {
+        raw = BigInt(tokenBalanceRaw);
+      } else {
+        raw = BigInt(0);
+      }
+      setUserTokens(Number(raw) / 10 ** TOKEN_DECIMALS);
+    } else {
+      setUserTokens(0);
+    }
+  }, [tokenBalanceRaw]);
+
+  // 4. Fetch store items
+  const fetchItems = useCallback(async () => {
+    if (!schoolId) return;
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const itemsRes = await fetch(`/api/store-items?schoolId=${schoolId}`);
+      if (!itemsRes.ok) throw new Error("Could not fetch store items");
+      const itemsData = await itemsRes.json();
+      const normalized = (itemsData.items || []).map((item) => ({
+        ...item,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+      }));
+      setItems(normalized);
+    } catch (err) {
+      setFetchError(err.message || "Unknown error");
+      toast.error(
+        "Failed to load store data: " + (err.message || "Unknown error")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [schoolId]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const itemsRes = await fetch("/api/storeitem");
-        const itemsData = await itemsRes.json();
-        setItems(itemsData.items || []);
+    fetchItems();
+  }, [fetchItems]);
 
-        const userRes = await fetch("/api/user");
-        const userData = await userRes.json();
-        setUserTokens(userData.tokens ?? 0);
-      } catch (err) {
-        toast.error("Failed to load store data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  async function buyItemWithSmartContract(item) {
-    return new Promise(function (resolve) {
-      setTimeout(function () {
-        resolve({ success: true, txHash: "0x123abc456def" });
-      }, 1200);
-    });
-  }
-
-  async function handleBuy() {
+  // 5. Handle buy
+  const handleBuy = async () => {
     if (!selectedItem) return;
-    if (!userTokens || userTokens < selectedItem.price) return;
-
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+    if (userTokens < selectedItem.price) {
+      toast.error("Not enough tokens!");
+      return;
+    }
+    if (selectedItem.quantity <= 0) {
+      toast.error("This item is out of stock.");
+      return;
+    }
     setBuying(true);
+    setPurchaseSuccess(false);
+
     try {
-      const result = await buyItemWithSmartContract(selectedItem);
-      if (result.success) {
-        toast.success(
-          <>
-            You bought <b>{selectedItem.title}</b>.<br />
-            <span className="text-xs">Tx Hash: {result.txHash}</span>
-          </>
-        );
-        setUserTokens((prev) =>
-          prev !== null ? prev - selectedItem.price : prev
-        );
-        setItems((prev) =>
-          prev.map((it) =>
-            it.id === selectedItem.id
-              ? { ...it, quantity: Math.max(0, it.quantity - 1) }
-              : it
-          )
-        );
-        setSelectedItem(null);
-      } else {
-        toast.error("There was a problem with your purchase.");
-      }
+      const priceRaw = BigInt(
+        Math.floor(selectedItem.price * 10 ** TOKEN_DECIMALS)
+      );
+      const hash = await writeContractAsync({
+        address: TOKEN_CONTRACT,
+        abi: TOKEN_ABI,
+        functionName: "transfer",
+        args: [STORE_RECEIVER, priceRaw],
+      });
+
+      toast.info("Transaction sent. Waiting for confirmation...");
+
+      await axios.post("/api/purchase", {
+        itemId: selectedItem.id,
+        txHash: hash,
+        walletAddress: address,
+      });
+
+      setPurchaseSuccess(true);
+      toast.success(
+        <>
+          <span>
+            You bought <b>{selectedItem.title}</b>.
+          </span>
+          <br />
+          <span className="text-xs">Tx Hash: {hash}</span>
+        </>
+      );
+
+      await Promise.all([fetchItems(), refetchTokenBalance()]);
     } catch (err) {
-      toast.error("Transaction error. Try again.");
+      console.error("Transaction failed:", err);
+      toast.error(
+        "Purchase failed: " +
+          (err?.shortMessage || err?.message || "Unknown error")
+      );
     } finally {
       setBuying(false);
     }
-  }
+  };
 
-  const bannerUrl = "/banner-placeholder.jpg";
-
+  // 6. UI
   return (
     <div className="min-h-screen bg-background pb-16">
       {/* Banner */}
@@ -103,24 +190,45 @@ export default function StorePage() {
           </h1>
         </div>
       </div>
+
       {/* User token balance */}
-      <div className=" flex  items-center justify-center gap-2 mb-8 px-4">
+      <div className="flex items-center justify-center gap-2 mb-8 px-4">
         <Coins className="w-6 h-6 text-yellow-500" />
         <span className="font-medium text-lg">My Tokens:</span>
         <span className="text-xl font-bold text-primary">
-          {userTokens !== null ? (
-            userTokens
+          {loadingBalance ? (
+            <Loader2 className="animate-spin inline-block w-4 h-4" />
           ) : (
-            <Loader className="animate-spin  w-4 h-4" />
+            userTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })
           )}
         </span>
+        {!isConnected && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-4"
+            onClick={() => connect({ connector: connectors[0] })}
+            disabled={connecting}
+          >
+            {connecting ? "Connecting..." : "Connect Wallet"}
+          </Button>
+        )}
       </div>
+
       {/* Store grid */}
       <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 px-4">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="animate-pulse h-64" />
           ))
+        ) : fetchError ? (
+          <div className="col-span-full flex flex-col items-center justify-center text-red-500 py-12">
+            <XCircle className="w-12 h-12 mb-2" />
+            <span>{fetchError}</span>
+            <Button className="mt-4" onClick={fetchItems}>
+              Retry
+            </Button>
+          </div>
         ) : items.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center text-muted-foreground py-12">
             <ShoppingCart className="w-12 h-12 mb-2" />
@@ -131,7 +239,10 @@ export default function StorePage() {
             <Card
               key={item.id}
               className="hover:shadow-xl transition-shadow cursor-pointer flex flex-col justify-between"
-              onClick={() => setSelectedItem(item)}
+              onClick={() => {
+                setSelectedItem(item);
+                setPurchaseSuccess(false);
+              }}
             >
               <CardContent className="p-6 flex flex-col gap-4 h-full">
                 <div className="flex items-center gap-2">
@@ -155,11 +266,20 @@ export default function StorePage() {
           ))
         )}
       </div>
-      {/* Modal / Dialog for item details */}
-      <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+
+      {/* Item Dialog */}
+      <Dialog
+        open={!!selectedItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedItem(null);
+            setPurchaseSuccess(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           {selectedItem && (
-            <React.Fragment>
+            <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-primary" />
@@ -187,39 +307,56 @@ export default function StorePage() {
                   />
                 </div>
               )}
+              {purchaseSuccess && (
+                <div className="flex items-center gap-1 text-green-600 mt-2 text-sm justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Purchase complete!
+                </div>
+              )}
               <DialogFooter className="mt-6 flex flex-col gap-2">
-                <Button
-                  onClick={handleBuy}
-                  disabled={
-                    buying ||
-                    !userTokens ||
-                    selectedItem.quantity === 0 ||
-                    userTokens < selectedItem.price
-                  }
-                  className="w-full"
-                >
-                  {buying ? (
-                    <Loader2 className="animate-spin w-4 h-4 mr-2" />
-                  ) : (
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                  )}
-                  Buy
-                </Button>
+                {!purchaseSuccess && (
+                  <Button
+                    onClick={handleBuy}
+                    disabled={
+                      buying ||
+                      !isConnected ||
+                      !address ||
+                      userTokens < selectedItem.price ||
+                      selectedItem.quantity <= 0
+                    }
+                    className="w-full"
+                  >
+                    {buying ? (
+                      <Loader2 className="animate-spin w-4 h-4 mr-2" />
+                    ) : (
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                    )}
+                    {isConnected
+                      ? buying
+                        ? "Processing..."
+                        : "Buy"
+                      : "Connect Wallet"}
+                  </Button>
+                )}
                 {selectedItem.quantity === 0 && (
                   <div className="flex items-center gap-1 text-red-500 text-sm justify-center">
                     <XCircle className="w-4 h-4" />
                     Out of stock
                   </div>
                 )}
-                {userTokens !== null &&
-                  userTokens < selectedItem.price &&
+                {userTokens < selectedItem.price &&
                   selectedItem.quantity > 0 && (
                     <div className="text-red-500 text-sm text-center">
                       Not enough tokens to buy this item.
                     </div>
                   )}
+                {!isConnected && (
+                  <div className="text-red-500 text-xs text-center">
+                    Please connect your wallet to buy items.
+                  </div>
+                )}
               </DialogFooter>
-            </React.Fragment>
+            </>
           )}
         </DialogContent>
       </Dialog>

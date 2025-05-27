@@ -48,7 +48,7 @@ export default function Landing() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="mt-8 flex justify-center space-x-4"
           >
-            <Link href="/dashboard">
+            <Link href="/wallet">
               <div className=" border-2 flex gap-3 justify-center items-center rounded-lg bg-blue-400 px-5 py-3 text-lg font-semibold text-white shadow-lg hover:scale-105 transition-transform duration-300">
                 <p>Start Reading </p>
                 <img

@@ -5,8 +5,10 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Web3Provider } from "../providers/wagmi-config";
 import WormyChatWidget from "@/components/WormyChat";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const layout = ({ children }) => {
+  const { user } = useAuthStore();
   return (
     <SidebarProvider
       style={{

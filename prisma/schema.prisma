@@ -3,54 +3,73 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String      @id @default(uuid())
-  name          String
-  email         String      @unique
-  password      String?
-  walletAddress String?     @unique
-  createdAt     DateTime    @default(now())
-  avatarSeed    String?
-  avatarColor   String?
-  school        String?
-  isSchool      Boolean     @default(false)
-  preferences   UserPreferences?
-  readingLogs   ReadingLog[]
-  PurchasedItems     PurchasedItem[]
-  TransactionHistory TransactionHistory[]
-  hasOnboarded  Boolean     @default(false)
+  id                 String               @id @default(uuid())
+  name               String
+  email              String               @unique
+  password           String?
+  walletAddress      String?              @unique
+  createdAt          DateTime             @default(now())
+  avatarSeed         String?
+  avatarColor        String?
+  schoolId           String?
+  school             School?              @relation("UserSchool", fields: [schoolId], references: [id])
+  // -- Admin relation --
+  adminOfSchool      School?              @relation("SchoolAdmin")
+  isAdmin            Boolean              @default(false)
+  preferences        UserPreferences?
+  readingLogs        ReadingLog[]
+  purchasedItems     PurchasedItem[]
+  transactionHistory TransactionHistory[]
+  hasOnboarded       Boolean              @default(false)
+}
+
+model School {
+  id         String      @id @default(uuid())
+  name       String
+  isActive   Boolean     @default(false)
+  users      User[]      @relation("UserSchool")
+  adminId    String?     @unique
+  admin      User?       @relation("SchoolAdmin", fields: [adminId], references: [id])
+  storeItems StoreItem[]
+
+  @@index([adminId])
 }
 
 model UserPreferences {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  genrePrefs    String[]
-  reading       String[]
-  favorites     String[]
-  goal          String?
-  notification  Boolean  @default(true)
-  darkMode      Boolean  @default(false)
-  user          User     @relation(fields: [userId], references: [id])
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  genrePrefs String[]
+  reading    String[]
+  favorites  String[]
+  goal       String?
+  darkMode   Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model ReadingLog {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   userId      String
-  title        String
+  title       String
   duration    Int
   summary     String
-  timestamp   DateTime  @default(now())
-  status      LogStatus @default(PENDING)
-  validatorId String?
-  validator    String?
-  logHash      String?
-  user        User      @relation(fields: [userId], references: [id])
+  timestamp   DateTime     @default(now())
+  status      LogStatus    @default(PENDING)
+  validator   String?  
+  logHash     String?
+  user        User         @relation(fields: [userId], references: [id])
   reward      TokenReward?
-  approvals   Int @default(0)
+  approvals   Int          @default(0)
+  feedback    String?
+  contractIndex Int?
+
+  @@index([userId])
 }
 
 enum LogStatus {
@@ -60,53 +79,59 @@ enum LogStatus {
 }
 
 model TokenReward {
-  id         String   @id @default(uuid())
-  logId      String   @unique
-  tokenType  String  
+  id         String     @id @default(uuid())
+  logId      String     @unique
+  tokenType  String
   tokenValue Int
-  contractTx String   
+  contractTx String
   log        ReadingLog @relation(fields: [logId], references: [id])
 }
 
 model StoreItem {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  price       Int      
-  quantity    Int
-  PurchasedItems   PurchasedItem[]
+  id             String          @id @default(uuid())
+  title          String
+  description    String
+  price          Int
+  quantity       Int
+  purchasedItems PurchasedItem[]
+  schoolId       String
+  school         School          @relation(fields: [schoolId], references: [id])
 }
 
 model PurchasedItem {
-  id        String     @id @default(uuid())
-  userId    String
-  itemId    String
-  acquiredAt DateTime   @default(now())
-  txHash    String
+  id         String    @id @default(uuid())
+  userId     String
+  itemId     String
+  acquiredAt DateTime  @default(now())
+  txHash     String
   qrCodeUrl  String?
-  user      User       @relation(fields: [userId], references: [id])
-  item      StoreItem  @relation(fields: [itemId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  item       StoreItem @relation(fields: [itemId], references: [id])
+
+  @@index([userId])
+  @@index([itemId])
 }
 
 model TransactionHistory {
-  id              String    @id @default(uuid())
-  userId          String    
-  transactionType TransactionType 
-  amount          Int?     
-  tokenAddress    String?   
-  transactionHash String    @unique 
-  blockNumber     Int?      
-  timestamp       DateTime  @default(now()) 
-  status          TxStatus  @default(PENDING)
-  user            User      @relation(fields: [userId], references: [id])
+  id              String          @id @default(uuid())
+  userId          String
+  transactionType TransactionType
+  amount          Int?
+  tokenAddress    String?
+  transactionHash String          @unique
+  blockNumber     Int?
+  timestamp       DateTime        @default(now())
+  status          TxStatus        @default(PENDING)
+  user            User            @relation(fields: [userId], references: [id])
 
+  @@index([userId])
 }
 
 enum TransactionType {
-  TOKEN_MINT  
-  TOKEN_BURN   
-  TOKEN_TRANSFER 
-  ITEM_PURCHASE 
+  TOKEN_MINT
+  TOKEN_BURN
+  TOKEN_TRANSFER
+  ITEM_PURCHASE
 }
 
 enum TxStatus {
